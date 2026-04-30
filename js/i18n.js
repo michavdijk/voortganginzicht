@@ -195,7 +195,7 @@ const translations = {
     'help.settings.nav':                'Settings',
     'help.settings.title':              'Settings',
     'help.settings.intro':              'Settings control what appears in the progress report and how size is visually explained. Open them with the gear icon next to the progress report.',
-    'help.settings.item1':              'Show percentage controls whether progress percentages are visible in the blocks.',
+    'help.settings.item1':              'Show progress percentages controls whether progress percentages are visible in the blocks.',
     'help.settings.item2':              'Color scheme changes the main color of the progress bars; Custom lets you choose the main color yourself.',
     'help.settings.item3':              'Size indicators draw vertical reference lines on the activity column so activity sizes are easier to compare.',
     'help.settings.item3.sub1':         'Turn size indicators on and add a size and label for each reference.',
@@ -228,7 +228,7 @@ const translations = {
     'type.subdoel':                     'Subgoal',
     'type.activiteit':                  'Activity',
 
-    'settings.percentage':              'Show percentage',
+    'settings.percentage':              'Show progress percentages',
     'settings.colorScheme':             'Color scheme',
     'settings.color.blauw':             'Blue',
     'settings.color.rood':              'Red',
