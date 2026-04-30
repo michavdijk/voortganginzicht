@@ -296,9 +296,19 @@ body {
   }
 
   .toolbar {
+    flex: 1 1 100%;
     flex-wrap: wrap;
     justify-content: center;
+    max-width: 100%;
     padding: 4px 0;
+  }
+
+  .lang-switcher {
+    flex: 1 1 100%;
+    justify-content: center;
+    margin-left: 0;
+    padding: 4px 0;
+    border-left: none;
   }
 
 }
