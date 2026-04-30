@@ -12,7 +12,7 @@ jobs:
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: voortganginzicht.nl
-        username: admin@voortganginzicht.nl
+        username: ${{ secrets.FTPUSERNAME }}
         password: ${{ secrets.FTPPASSWORD }}
         protocol: ftps
         server-dir: public_html/
