@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <title>Model Tests – Voortgangsplaat</title>
+  <style>
+    body {
+      font-family: monospace;
+      font-size: 14px;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 { color: #9cdcfe; margin-bottom: 4px; }
+    h2 { color: #569cd6; margin-top: 24px; margin-bottom: 6px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; }
+    #summary {
+      margin: 12px 0 20px;
+      padding: 10px 14px;
+      background: #252526;
+      border-radius: 4px;
+      font-size: 15px;
+    }
+    #summary.all-pass { border-left: 4px solid #4ec9b0; }
+    #summary.has-fail  { border-left: 4px solid #f44747; }
+    .pass { color: #4ec9b0; }
+    .fail { color: #f44747; }
+    .suite { margin-bottom: 8px; }
+    .result {
+      padding: 3px 0 3px 20px;
+      border-left: 2px solid transparent;
+    }
+    .result.pass { border-left-color: #4ec9b0; }
+    .result.fail { border-left-color: #f44747; background: #1a0000; }
+    .result .label { font-weight: bold; }
+    .result .spec  { color: #ce9178; font-size: 12px; margin-left: 8px; }
+    .error-msg {
+      margin: 4px 0 4px 20px;
+      color: #f44747;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>Voortgangsplaat – Model Tests</h1>
+  <div id="summary">Running…</div>
+  <div id="output"></div>
+
+  <script type="module">
+    // ─── Imports ─────────────────────────────────────────────────────────────
+    import { on, off, emit } from '../js/events.js';
+    import { Knoop, getType, addChild, removeNode, renameNode, moveUp, moveDown, setOmvang, setVoortgang } from '../js/model/tree.js';
+    import { validateNaam, validateOmvang, validatePercentage } from '../js/model/validation.js';
+    import { getRoot, setRoot, isDirty, markClean, newProject } from '../js/model/project.js';
+    import { CUSTOM_COLOR_SCHEME, getColorPalette, getSettings, updateSettings, resetSettings } from '../js/model/settings.js';
+    import { computeLayout, FIXED_WIDTH, TEXT_H_PADDING, wrapTextToWidth } from '../js/chart/layout.js';
+    import { serialize, deserialize } from '../js/io/serializer.js';
+
+    // ─── Minimal test runner ─────────────────────────────────────────────────
+    let passed = 0;
+    let failed = 0;
+    let currentSuite = null;
+    const output = document.getElementById('output');
+
+    function suite(name) {
+      currentSuite = document.createElement('div');
+      currentSuite.className = 'suite';
+      const heading = document.createElement('h2');
+      heading.textContent = name;
+      currentSuite.appendChild(heading);
+      output.appendChild(currentSuite);
+    }
+
+    /**
+     * Run a single test case.
+     * @param {string} name  – human readable test name
+     * @param {Function} fn  – synchronous test body; throw to fail
+     * @param {string} [spec] – spec reference (e.g. "SC-001")
+     */
+    function test(name, fn, spec) {
+      const row = document.createElement('div');
+      row.className = 'result';
+      try {
+        fn();
+        passed++;
+        row.classList.add('pass');
+        row.innerHTML =
+          `<span class="label pass">PASS</span> ${esc(name)}`
+          + (spec ? `<span class="spec">[${esc(spec)}]</span>` : '');
+      } catch (err) {
+        failed++;
+        row.classList.add('fail');
+        row.innerHTML =
+          `<span class="label fail">FAIL</span> ${esc(name)}`
+          + (spec ? `<span class="spec">[${esc(spec)}]</span>` : '');
+        const errDiv = document.createElement('div');
+        errDiv.className = 'error-msg';
+        errDiv.textContent = err instanceof Error
+          ? `${err.message}${err.stack ? '\n' + err.stack.split('\n').slice(1, 4).join('\n') : ''}`
+          : String(err);
+        (currentSuite || output).appendChild(errDiv);
+      }
+      (currentSuite || output).appendChild(row);
+    }
+
+    /** Throw if condition is falsy. */
+    function assert(condition, message) {
+      if (!condition) throw new Error(message ?? 'Assertion failed');
+    }
+
+    /** Throw if fn() does NOT throw. */
+    function assertThrows(fn, messageSubstring) {
+      let threw = false;
+      let err = null;
+      try { fn(); } catch (e) { threw = true; err = e; }
+      if (!threw) throw new Error('Expected an error to be thrown, but none was.');
+      if (messageSubstring && !String(err?.message).includes(messageSubstring)) {
+        throw new Error(`Expected error message to contain "${messageSubstring}", got: "${err?.message}"`);
+      }
+    }
+
+    /** Throw if fn() throws. Returns the value returned by fn(). */
+    function assertNoThrow(fn) {
+      try { return fn(); }
+      catch (e) { throw new Error(`Expected no error but got: ${e.message}`); }
+    }
+
+    function esc(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    /**
+     * Subscribe to an event for the duration of a test, then clean up.
+     * Returns a mutable array that accumulates all payloads received.
+     */
+    function captureEvents(eventName) {
+      const received = [];
+      const handler = (data) => received.push(data);
+      on(eventName, handler);
+      received._cleanup = () => off(eventName, handler);
+      return received;
+    }
+
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+
+    /** Build a minimal tree: root Doel with no children. */
+    function makeRoot(naam = 'Mijn Project') {
+      const root = new Knoop(naam, null);
+      return root;
+    }
+
+    /** Reset project module to a clean state between tests. */
+    function resetProject() {
+      setRoot(null);
+      markClean();
+    }
+
+    function boxCenter(box) {
+      return box.y + box.height / 2;
+    }
+
+    function findLayoutBox(layout, node) {
+      return layout.boxes.find(box => box.node === node);
+    }
+
+    function assertNear(actual, expected, message) {
+      if (Math.abs(actual - expected) > 0.000001) {
+        throw new Error(`${message}: expected ${expected}, got ${actual}`);
+      }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Suite 1 – validateNaam
+    // ════════════════════════════════════════════════════════════════════════
+    suite('validateNaam');
+
+    test('accepts a normal name', () => {
+      const r = validateNaam('Frontend');
+      assert(r.valid === true);
+      assert(r.error === null);
+    });
+
+    test('rejects empty string', () => {
+      const r = validateNaam('');
+      assert(r.valid === false);
+      assert(typeof r.error === 'string' && r.error.length > 0);
+    }, 'EC-1');
+
+    test('rejects whitespace-only string', () => {
+      const r = validateNaam('   ');
+      assert(r.valid === false, 'Expected invalid for whitespace-only');
+    }, 'EC-1');
+
+    test('accepts name of exactly 200 characters', () => {
+      const r = validateNaam('a'.repeat(200));
+      assert(r.valid === true, 'Expected valid for 200-char name');
+    }, 'EC-2');
+
+    test('rejects name of 201 characters', () => {
+      const r = validateNaam('a'.repeat(201));
+      assert(r.valid === false, 'Expected invalid for 201-char name');
+    }, 'EC-3');
+
+    test('rejects non-string value', () => {
+      const r = validateNaam(42);
+      assert(r.valid === false);
+    });
+
+    test('rejects null', () => {
+      const r = validateNaam(null);
+      assert(r.valid === false);
+    });
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Suite 2 – validateOmvang
+    // ════════════════════════════════════════════════════════════════════════
+    suite('validateOmvang');
+
+    test('accepts integer 1', () => {
+      const r = validateOmvang(1);
+      assert(r.valid === true);
+    });
+
+    test('accepts large integer', () => {
+      const r = validateOmvang(1000);
+      assert(r.valid === true);
+    });
+
+    test('accepts numeric string "5"', () => {
+      const r = validateOmvang('5');
+      assert(r.valid === true);
+    });
+
+    test('rejects 0', () => {
+      const r = validateOmvang(0);
+      assert(r.valid === false);
+    });
+
+    test('rejects negative integer', () => {
+      const r = validateOmvang(-1);
+      assert(r.valid === false);
+    });
+
+    test('rejects decimal 1.5', () => {
+      const r = validateOmvang(1.5);
+      assert(r.valid === false);
+    });
+
+    test('rejects non-numeric string', () => {
+      const r = validateOmvang('abc');
+      assert(r.valid === false);
+    });
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Suite 3 – validatePercentage
+    // ════════════════════════════════════════════════════════════════════════
+    suite('validatePercentage');
+
+    test('accepts 0', () => {
+      const r = validatePercentage(0);
+      assert(r.valid === true);
+    });
+
+    test('accepts 100', () => {
+      const r = validatePercentage(100);
+      assert(r.valid === true);
+    });
+
+    test('accepts 50', () => {
+      const r = validatePercentage(50);
+      assert(r.valid === true);
+    });
+
+    test('accepts numeric string "75"', () => {
+      const r = validatePercentage('75');
+      assert(r.valid === true);
+    });
+
+    test('rejects -1', () => {
+      const r = validatePercentage(-1);
+      assert(r.valid === false);
+    });
+
+    test('rejects 101', () => {
+      const r = validatePercentage(101);
+      assert(r.valid === false);
+    });
+
+    test('rejects decimal 50.5', () => {
+      const r = validatePercentage(50.5);
+      assert(r.valid === false);
+    });
+
+    test('rejects non-numeric string', () => {
+      const r = validatePercentage('done');
+      assert(r.valid === false);
+    });
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Suite 4 – Knoop constructor & getType
+    // ════════════════════════════════════════════════════════════════════════
+    suite('Knoop constructor & getType');
+
+    test('new root Knoop has correct initial state', () => {
+      const k = new Knoop('Mijn project');
+      assert(k.naam === 'Mijn project');
+      assert(k.parent === null);
+      assert(Array.isArray(k.kinderen) && k.kinderen.length === 0);
+      assert(k.omvang === null);
+      assert(k.voortgangspercentage === 0);
+      assert(typeof k.id === 'string' && k.id.length > 0);
+    }, 'SC-001');
+
+    test('getType returns Doel for root (parent === null)', () => {
+      const root = makeRoot();
+      assert(getType(root) === 'Doel');
+    }, 'SC-001');
+
+    test('getType returns Activiteit for leaf with parent', () => {
+      const root = makeRoot();
+      const child = new Knoop('Kind', root);
+      root.kinderen.push(child);
+      assert(getType(child) === 'Activiteit');
+    }, 'SC-003');
+
+    test('getType returns Subdoel for non-root node with children', () => {
+      const root = makeRoot();
+      const child = new Knoop('Kind', root);
+      root.kinderen.push(child);
+      const grandchild = new Knoop('Kleinkind', child);
+      child.kinderen.push(grandchild);
+      assert(getType(child) === 'Subdoel');
+    }, 'SC-004');
+
+    test('two Knopen have different UUIDs', () => {
+      const a = new Knoop('A');
+      const b = new Knoop('B');
+      assert(a.id !== b.id, 'IDs should be unique');
+    });
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Suite 5 – addChild
+    // ════════════════════════════════════════════════════════════════════════
+    suite('addChild');
+
+    test('SC-001: creating the first Doel node', () => {
+      // In the domain model a Doel is simply a Knoop with parent === null.
+      // The "create Doel" action is: new Knoop(naam, null) + setRoot().
+      resetProject();
+      const root = new Knoop('Nieuwe applicatie bouwen', null);
+      setRoot(root);
+      assert(getRoot() !== null);
+      assert(getRoot().naam === 'Nieuwe applicatie bouwen');
+      assert(getType(getRoot()) === 'Doel');
+    }, 'SC-001');
+
+    test('SC-002: only one root can exist – project state enforces this', () => {
+      // The model stores at most one root; overwriting it means "second Doel".
+      // The spec says the UI must prevent a second Doel. At the model layer
+      // we verify that getRoot() reflects the current (single) root.
+      resetProject();
+      const first = new Knoop('Eerste', null);
+      setRoot(first);
+      assert(getRoot() === first, 'Root should be the first Knoop set');
+      // A second call would replace it – the UI must guard against this.
+      // The model itself does not throw; FR-002 is a UI-layer constraint.
+    }, 'SC-002');
+
+    test('SC-003: add child to Doel produces an Activiteit', () => {
+      const root = makeRoot('Nieuwe applicatie bouwen');
+      const events = captureEvents('tree-changed');
+
+      const child = addChild(root, 'Frontend');
+
+      assert(root.kinderen.length === 1, 'Doel should have one child');
+      assert(root.kinderen[0] === child, 'Child should be the returned node');
+      assert(child.naam === 'Frontend');
+      assert(getType(child) === 'Activiteit');
+      assert(events.length === 1 && events[0].action === 'addChild', 'tree-changed event should fire');
+      events._cleanup();
+    }, 'SC-003');
+
+    test('SC-003: new child node has the correct parent reference', () => {
+      const root = makeRoot();
+      const child = addChild(root, 'Backend');
+      assert(child.parent === root);
+    }, 'SC-003');
+
+    test('SC-004: adding child to Activiteit reclassifies it as Subdoel', () => {
+      const root = makeRoot('Nieuwe applicatie bouwen');
+      const frontend = addChild(root, 'Frontend');
+
+      // Frontend is initially an Activiteit
+      assert(getType(frontend) === 'Activiteit', 'Pre-condition: Frontend should be Activiteit');
+
+      const login = addChild(frontend, 'Login pagina');
+
+      assert(getType(frontend) === 'Subdoel', 'Frontend should now be Subdoel');
+      assert(frontend.kinderen.length === 1, 'Frontend should have one child');
+      assert(login.naam === 'Login pagina');
+      assert(getType(login) === 'Activiteit', 'Login pagina should be Activiteit');
+    }, 'SC-004');
+
+    test('SC-004: promoting Activiteit to Subdoel clears omvang and voortgang', () => {
+      const root = makeRoot();
+      const act = addChild(root, 'Taak');
+
+      // Manually set Activiteit-level data
+      act.omvang = 5;
+      act.voortgangspercentage = 40;
+
+      // Now add a child — should clear those fields
+      addChild(act, 'Subtaak');
+
+      assert(act.omvang === null, 'omvang should be cleared when Activiteit becomes Subdoel');
+      assert(act.voortgangspercentage === 0, 'voortgang should be reset when Activiteit becomes Subdoel');
+    }, 'SC-004');
+
+    test('addChild trims leading/trailing whitespace in naam before validation', () => {
+      const root = makeRoot();
+      // A name that is valid after trimming should be accepted
+      assertNoThrow(() => addChild(root, '  Valide naam  '));
+    });
+
+    test('addChild throws for empty name', () => {
+      const root = makeRoot();
+      assertThrows(() => addChild(root, ''), 'leeg');
+    }, 'EC-1');
+
+    test('addChild throws for whitespace-only name', () => {
+      const root = makeRoot();
+      assertThrows(() => addChild(root, '   '));
+    }, 'EC-1');
+
+    test('addChild throws for name longer than 200 characters', () => {
+      const root = makeRoot();
+      assertThrows(() => addChild(root, 'a'.repeat(201)));
+    }, 'EC-3');
+
+    test('addChild accepts name of exactly 200 characters', () => {
+      const root = makeRoot();
+      assertNoThrow(() => addChild(root, 'x'.repeat(200)));
+    }, 'EC-2');
+
+    test('addChild emits tree-changed event with action addChild', () => {
+      const root = makeRoot();
+      const events = captureEvents('tree-changed');
+
+      addChild(root, 'Kind');
+
+      assert(events.length === 1);
+      assert(events[0].action === 'addChild');
+      assert(events[0].parent === root);
+      assert(events[0].child !== undefined);
+      events._cleanup();
+    });
+
+    test('EC-7: deep tree (10+ levels) works without error', () => {
+      let node = makeRoot('Root');
+      for (let i = 1; i <= 12; i++) {
+        node = addChild(node, `Niveau ${i}`);
+      }
+      assert(getType(node) === 'Activiteit', 'Deepest node should be Activiteit');
+    }, 'EC-7');
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Suite 6 – removeNode
+    // ════════════════════════════════════════════════════════════════════════
+    suite('removeNode');
+
+    test('SC-007: removing an Activiteit (leaf) removes it from parent.kinderen', () => {
+      const root = makeRoot();
+      const login = addChild(root, 'Login pagina');
+
+      assert(root.kinderen.length === 1, 'Pre-condition: root has one child');
+
+      const events = captureEvents('tree-changed');
+      removeNode(login);
+
+      assert(root.kinderen.length === 0, 'Login pagina should be removed');
+      assert(!root.kinderen.includes(login));
+      assert(events.length === 1 && events[0].action === 'removeNode');
+      events._cleanup();
+    }, 'SC-007');
+
+    test('SC-008: removing a Subdoel also removes all its descendants', () => {
+      const root = makeRoot();
+      const frontend = addChild(root, 'Frontend');
+      const login = addChild(frontend, 'Login pagina');
+      const register = addChild(frontend, 'Registratie');
+
+      // Pre-condition
+      assert(getType(frontend) === 'Subdoel');
+      assert(frontend.kinderen.length === 2);
+
+      removeNode(frontend);
+
+      assert(!root.kinderen.includes(frontend), 'Frontend should be removed from root');
+      // login and register are descendants — they were carried away with frontend
+      assert(!root.kinderen.includes(login));
+      assert(!root.kinderen.includes(register));
+      assert(root.kinderen.length === 0);
+    }, 'SC-008');
+
+    test('SC-009: removing root emits removeRoot event', () => {
+      const root = makeRoot();
+      addChild(root, 'Kind');
+
+      const events = captureEvents('tree-changed');
+      removeNode(root);
+
+      assert(events.length === 1 && events[0].action === 'removeRoot');
+      events._cleanup();
+    }, 'SC-009');
+
+    test('EC-4: Subdoel losing last child becomes Activiteit', () => {
+      const root = makeRoot();
+      const frontend = addChild(root, 'Frontend');
+      const login = addChild(frontend, 'Login pagina');
+
+      assert(getType(frontend) === 'Subdoel', 'Pre-condition: Frontend is Subdoel');
+
+      removeNode(login);
+
+      assert(getType(frontend) === 'Activiteit', 'Frontend should revert to Activiteit after last child removed');
+    }, 'EC-4');
+
+    test('EC-5: parent becomes Activiteit and its omvang/voortgang are cleared', () => {
+      const root = makeRoot();
+      const parent = addChild(root, 'Ouder');
+      const kind = addChild(parent, 'Kind');
+
+      // Subdoelen should have null/0 for these fields (they were cleared on promotion)
+      // Confirm the state before removal
+      assert(parent.omvang === null);
+      assert(parent.voortgangspercentage === 0);
+
+      removeNode(kind);
+
+      // After last child removed, parent becomes Activiteit — fields stay cleared
+      assert(getType(parent) === 'Activiteit');
+      assert(parent.omvang === null, 'omvang should remain null after demotion');
+      assert(parent.voortgangspercentage === 0, 'voortgang should remain 0 after demotion');
+    }, 'EC-5');
+
+    test('removing one of multiple children leaves siblings intact', () => {
+      const root = makeRoot();
+      const a = addChild(root, 'A');
+      const b = addChild(root, 'B');
+      const c = addChild(root, 'C');
+
+      removeNode(b);
+
+      assert(root.kinderen.length === 2);
+      assert(root.kinderen[0] === a);
+      assert(root.kinderen[1] === c);
+    });
+
+    test('removeNode emits tree-changed with removeNode action for non-root', () => {
+      const root = makeRoot();
+      const child = addChild(root, 'Kind');
+      const events = captureEvents('tree-changed');
+
+      removeNode(child);
+
+      assert(events.length === 1 && events[0].action === 'removeNode');
+      assert(events[0].parent === root);
+      assert(events[0].node === child);
+      events._cleanup();
+    });
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Suite 7 – renameNode
+    // ════════════════════════════════════════════════════════════════════════
+    suite('renameNode');
+
+    test('SC-005: renameNode updates the naam property', () => {
+      const root = makeRoot('Fronend');  // typo on purpose
+      const events = captureEvents('tree-changed');
+
+      renameNode(root, 'Frontend');
+
+      assert(root.naam === 'Frontend');
+      assert(events.length === 1 && events[0].action === 'renameNode');
+      events._cleanup();
+    }, 'SC-005');
+
+    test('SC-006: renameNode throws for empty string, leaving name unchanged', () => {
+      const root = makeRoot('Frontend');
+      assertThrows(() => renameNode(root, ''));
+      assert(root.naam === 'Frontend', 'Name should remain unchanged after failed rename');
+    }, 'SC-006');
+
+    test('SC-006: renameNode throws for whitespace-only, leaving name unchanged', () => {
+      const root = makeRoot('Frontend');
+      assertThrows(() => renameNode(root, '   '));
+      assert(root.naam === 'Frontend');
+    }, 'SC-006, EC-1');
+
+    test('EC-2: renameNode accepts name of exactly 200 characters', () => {
+      const root = makeRoot('Oud');
+      assertNoThrow(() => renameNode(root, 'a'.repeat(200)));
+      assert(root.naam === 'a'.repeat(200));
+    }, 'EC-2');
+
+    test('EC-3: renameNode throws for name of 201 characters', () => {
+      const root = makeRoot('Oud');
+      assertThrows(() => renameNode(root, 'a'.repeat(201)));
+      assert(root.naam === 'Oud', 'Name should remain unchanged');
+    }, 'EC-3');
+
+    test('renameNode trims surrounding whitespace before storing', () => {
+      const root = makeRoot('Oud');
+      renameNode(root, '  Nieuw  ');
+      assert(root.naam === 'Nieuw', `Expected trimmed name, got: "${root.naam}"`);
+    });
+
+    test('renameNode emits tree-changed with renameNode action', () => {
+      const root = makeRoot('Oud');
+      const events = captureEvents('tree-changed');
+
+      renameNode(root, 'Nieuw');
+
+      assert(events.length === 1 && events[0].action === 'renameNode');
+      assert(events[0].node === root);
+      events._cleanup();
+    });
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Suite 8 – moveUp / moveDown
+    // ════════════════════════════════════════════════════════════════════════
+    suite('moveUp / moveDown');
+
+    test('SC-010: moveUp moves node from position 1 to position 0 (0-indexed)', () => {
+      const root = makeRoot();
+      const a = addChild(root, 'A');
+      const b = addChild(root, 'B');  // position 1 (0-indexed)
+      const c = addChild(root, 'C');
+
+      // Pre-condition: B is at index 1
+      assert(root.kinderen[1] === b, 'Pre-condition: B at index 1');
+
+      const events = captureEvents('tree-changed');
+      moveUp(b);
+
+      assert(root.kinderen[0] === b, 'B should now be at index 0');
+      assert(root.kinderen[1] === a, 'A should now be at index 1');
+      assert(root.kinderen[2] === c, 'C should remain at index 2');
+      assert(events.length === 1 && events[0].action === 'moveUp');
+      events._cleanup();
+    }, 'SC-010');
+
+    test('SC-011: moveUp on first sibling is a no-op', () => {
+      const root = makeRoot();
+      const a = addChild(root, 'A');
+      const b = addChild(root, 'B');
+      const c = addChild(root, 'C');
+
+      const events = captureEvents('tree-changed');
+      moveUp(a);  // A is already first — should do nothing
+
+      assert(root.kinderen[0] === a, 'A should still be at index 0');
+      assert(root.kinderen[1] === b);
+      assert(root.kinderen[2] === c);
+      assert(events.length === 0, 'No event should be emitted for a no-op moveUp');
+      events._cleanup();
+    }, 'SC-011');
+
+    test('moveDown moves node from position 1 to position 2', () => {
+      const root = makeRoot();
+      const a = addChild(root, 'A');
+      const b = addChild(root, 'B');  // position 1
+      const c = addChild(root, 'C');
+
+      const events = captureEvents('tree-changed');
+      moveDown(b);
+
+      assert(root.kinderen[0] === a, 'A should remain at index 0');
+      assert(root.kinderen[1] === c, 'C should now be at index 1');
+      assert(root.kinderen[2] === b, 'B should now be at index 2');
+      assert(events.length === 1 && events[0].action === 'moveDown');
+      events._cleanup();
+    });
+
+    test('moveDown on last sibling is a no-op', () => {
+      const root = makeRoot();
+      const a = addChild(root, 'A');
+      const b = addChild(root, 'B');
+      const c = addChild(root, 'C');  // last
+
+      const events = captureEvents('tree-changed');
+      moveDown(c);
+
+      assert(root.kinderen[2] === c, 'C should still be last');
+      assert(events.length === 0, 'No event should be emitted for a no-op moveDown');
+      events._cleanup();
+    });
+
+    test('moveUp on root node is a no-op', () => {
+      const root = makeRoot();
+      // Should not throw
+      assertNoThrow(() => moveUp(root));
+    });
+
+    test('moveDown on root node is a no-op', () => {
+      const root = makeRoot();
+      assertNoThrow(() => moveDown(root));
+    });
+
+    test('moveUp on single child is a no-op', () => {
+      const root = makeRoot();
+      const only = addChild(root, 'Enig kind');
+
+      const events = captureEvents('tree-changed');
+      moveUp(only);
+
+      assert(root.kinderen[0] === only);
+      assert(events.length === 0);
+      events._cleanup();
+    });
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Suite 9 – setOmvang / setVoortgang
+    // ════════════════════════════════════════════════════════════════════════
+    suite('setOmvang / setVoortgang');
+
+    test('setOmvang sets omvang on an Activiteit', () => {
+      const root = makeRoot();
+      const act = addChild(root, 'Taak');
+
+      const events = captureEvents('tree-changed');
+      setOmvang(act, 5);
+
+      assert(act.omvang === 5);
+      assert(events.length === 1 && events[0].action === 'setOmvang');
+      events._cleanup();
+    });
+
+    test('setOmvang accepts numeric string', () => {
+      const root = makeRoot();
+      const act = addChild(root, 'Taak');
+      setOmvang(act, '8');
+      assert(act.omvang === 8);
+    });
+
+    test('setOmvang throws on a Subdoel', () => {
+      const root = makeRoot();
+      const sub = addChild(root, 'Subdoel');
+      addChild(sub, 'Kind');
+      assertThrows(() => setOmvang(sub, 3), 'Activiteit');
+    });
+
+    test('setOmvang throws on the Doel (root)', () => {
+      const root = makeRoot();
+      assertThrows(() => setOmvang(root, 3), 'Activiteit');
+    });
+
+    test('setOmvang throws for value 0', () => {
+      const root = makeRoot();
+      const act = addChild(root, 'Taak');
+      assertThrows(() => setOmvang(act, 0));
+    });
+
+    test('setOmvang throws for decimal value', () => {
+      const root = makeRoot();
+      const act = addChild(root, 'Taak');
+      assertThrows(() => setOmvang(act, 1.5));
+    });
+
+    test('setVoortgang sets voortgangspercentage on an Activiteit', () => {
+      const root = makeRoot();
+      const act = addChild(root, 'Taak');
+
+      const events = captureEvents('tree-changed');
+      setVoortgang(act, 75);
+
+      assert(act.voortgangspercentage === 75);
+      assert(events.length === 1 && events[0].action === 'setVoortgang');
+      events._cleanup();
+    });
+
+    test('setVoortgang accepts 0 and 100 as boundary values', () => {
+      const root = makeRoot();
+      const act = addChild(root, 'Taak');
+
+      setVoortgang(act, 0);
+      assert(act.voortgangspercentage === 0);
+
+      setVoortgang(act, 100);
+      assert(act.voortgangspercentage === 100);
+    });
+
+    test('setVoortgang throws on a Subdoel', () => {
+      const root = makeRoot();
+      const sub = addChild(root, 'Subdoel');
+      addChild(sub, 'Kind');
+      assertThrows(() => setVoortgang(sub, 50), 'Activiteit');
+    });
+
+    test('setVoortgang throws for value above 100', () => {
+      const root = makeRoot();
+      const act = addChild(root, 'Taak');
+      assertThrows(() => setVoortgang(act, 101));
+    });
+
+    test('setVoortgang throws for negative value', () => {
+      const root = makeRoot();
+      const act = addChild(root, 'Taak');
+      assertThrows(() => setVoortgang(act, -1));
+    });
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Suite 10 – project.js state
+    // ════════════════════════════════════════════════════════════════════════
+    suite('project.js state');
+
+    test('getRoot returns null on a fresh project', () => {
+      resetProject();
+      assert(getRoot() === null);
+    });
+
+    test('setRoot / getRoot round-trip', () => {
+      resetProject();
+      const root = makeRoot('Mijn project');
+      setRoot(root);
+      assert(getRoot() === root);
+    });
+
+    test('isDirty is false after markClean()', () => {
+      markClean();
+      assert(isDirty() === false);
+    });
+
+    test('tree-changed event marks project dirty', () => {
+      resetProject();
+      const root = makeRoot('Project');
+      setRoot(root);
+      markClean();
+
+      assert(isDirty() === false, 'Pre-condition: should be clean');
+
+      addChild(root, 'Kind');  // emits tree-changed
+
+      assert(isDirty() === true, 'Project should be dirty after tree mutation');
+    });
+
+    test('newProject resets root to null and clears dirty flag', () => {
+      const root = makeRoot();
+      setRoot(root);
+      addChild(root, 'Kind');  // makes it dirty
+
+      const events = captureEvents('project-loaded');
+      newProject();
+
+      assert(getRoot() === null, 'Root should be null after newProject');
+      assert(isDirty() === false, 'Project should not be dirty after newProject');
+      assert(events.length === 1, 'project-loaded event should fire');
+      events._cleanup();
+    });
+
+    test('EC-6: tree with only a Doel and no children is a valid state', () => {
+      resetProject();
+      const root = makeRoot('Doel zonder kinderen');
+      setRoot(root);
+
+      assert(getRoot() !== null);
+      assert(getType(getRoot()) === 'Doel');
+      assert(getRoot().kinderen.length === 0);
+    }, 'EC-6');
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Suite 11 – chart layout
+    // ════════════════════════════════════════════════════════════════════════
+    suite('chart layout');
+
+    test('branch boxes centre on their immediate child boxes', () => {
+      const root = makeRoot('Hoofddoel met langere naam zodat de box hoger wordt');
+      const subA = addChild(root, 'Subdoel A met langere naam');
+      const nested = addChild(subA, 'Genest subdoel');
+      const actA1 = addChild(nested, 'Activiteit A1');
+      setOmvang(actA1, 1);
+      const actA2 = addChild(subA, 'Activiteit A2 met langere naam die kan wrappen');
+      setOmvang(actA2, 2);
+
+      const subB = addChild(root, 'Subdoel B');
+      const actB1 = addChild(subB, 'Activiteit B1');
+      setOmvang(actB1, 3);
+
+      const layout = computeLayout(root, 900);
+      const rootBox = findLayoutBox(layout, root);
+      const subABox = findLayoutBox(layout, subA);
+      const subBBox = findLayoutBox(layout, subB);
+      const nestedBox = findLayoutBox(layout, nested);
+      const actA1Box = findLayoutBox(layout, actA1);
+      const actA2Box = findLayoutBox(layout, actA2);
+      const actB1Box = findLayoutBox(layout, actB1);
+
+      assertNear(boxCenter(nestedBox), boxCenter(actA1Box), 'Nested subdoel should centre on its activiteit');
+      assertNear(boxCenter(subBBox), boxCenter(actB1Box), 'Subdoel should centre on its activiteit');
+
+      const subAChildTop = Math.min(nestedBox.y, actA2Box.y);
+      const subAChildBottom = Math.max(nestedBox.y + nestedBox.height, actA2Box.y + actA2Box.height);
+      assertNear(
+        boxCenter(subABox),
+        subAChildTop + (subAChildBottom - subAChildTop) / 2,
+        'Subdoel should centre on immediate child boxes'
+      );
+
+      const rootChildTop = Math.min(subABox.y, subBBox.y);
+      const rootChildBottom = Math.max(subABox.y + subABox.height, subBBox.y + subBBox.height);
+      assertNear(
+        boxCenter(rootBox),
+        rootChildTop + (rootChildBottom - rootChildTop) / 2,
+        'Doel should centre on immediate child subdoel boxes'
+      );
+    });
+
+    test('chart labels only wrap when their measured text width needs it', () => {
+      const textAreaWidth = FIXED_WIDTH - 2 * TEXT_H_PADDING;
+      const lines = wrapTextToWidth('Subdoel A met langere naam', textAreaWidth);
+      assert(lines.length === 1, 'Label should fit on one line at fixed goal/subgoal width');
+    });
+
+    test('size indicators replace the relative-size guide in the layout', () => {
+      const root = makeRoot('Project');
+      const act = addChild(root, 'Activiteit');
+      setOmvang(act, 5);
+
+      const layout = computeLayout(root, 700, {
+        sizeIndicators: [{ omvang: 3, label: 'Mijlpaal' }],
+      });
+
+      assert(layout.sizeGuide === null, 'Relative-size guide should be hidden when indicators are used');
+      assert(layout.sizeIndicators.length === 1, 'Expected one size indicator descriptor');
+      assert(layout.sizeIndicators[0].label === 'Mijlpaal');
+    });
+
+    test('relative-size guide can be hidden while indicator mode is enabled', () => {
+      const root = makeRoot('Project');
+      const act = addChild(root, 'Activiteit');
+      setOmvang(act, 5);
+
+      const layout = computeLayout(root, 700, { hideSizeGuide: true });
+
+      assert(layout.sizeGuide === null, 'Relative-size guide should be hidden in indicator mode');
+      assert(layout.sizeIndicators.length === 0);
+    });
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Suite 12 – project JSON settings
+    // ════════════════════════════════════════════════════════════════════════
+    suite('project JSON settings');
+
+    test('serializer preserves size indicator settings', () => {
+      const root = makeRoot('Project');
+      const act = addChild(root, 'Activiteit');
+      setOmvang(act, 8);
+
+      const json = serialize(root, {
+        showPercentage: false,
+        colorScheme: 'groen',
+        showSizeIndicators: true,
+        sizeIndicators: [{ omvang: 4, label: 'Halverwege' }],
+      }, 'Testproject');
+      const doc = JSON.parse(json);
+
+      assert(doc.instellingen.showSizeIndicators === true);
+      assert(doc.instellingen.sizeIndicators.length === 1);
+      assert(doc.instellingen.sizeIndicators[0].omvang === 4);
+      assert(doc.instellingen.sizeIndicators[0].label === 'Halverwege');
+
+      const result = deserialize(json);
+      assert(result.valid === true);
+      assert(result.settings.showSizeIndicators === true);
+      assert(result.settings.sizeIndicators.length === 1);
+      assert(result.settings.sizeIndicators[0].label === 'Halverwege');
+    });
+
+    test('serializer preserves custom color settings', () => {
+      const json = serialize(null, {
+        showPercentage: true,
+        colorScheme: CUSTOM_COLOR_SCHEME,
+        customColor: '#0f766e',
+        showSizeIndicators: false,
+        sizeIndicators: [],
+      }, 'Kleurproject');
+
+      const doc = JSON.parse(json);
+      assert(doc.instellingen.colorScheme === CUSTOM_COLOR_SCHEME);
+      assert(doc.instellingen.customColor === '#0F766E');
+
+      const result = deserialize(json);
+      assert(result.valid === true);
+      assert(result.settings.colorScheme === CUSTOM_COLOR_SCHEME);
+      assert(result.settings.customColor === '#0F766E');
+    });
+
+    test('legacy v2 settings without size indicators get defaults', () => {
+      const result = deserialize(JSON.stringify({
+        versie: '2',
+        projectnaam: 'Oud project',
+        instellingen: { showPercentage: true, colorScheme: 'blauw' },
+        doel: null,
+      }));
+
+      assert(result.valid === true);
+      assert(result.settings.showSizeIndicators === false);
+      assert(typeof result.settings.customColor === 'string');
+      assert(Array.isArray(result.settings.sizeIndicators));
+      assert(result.settings.sizeIndicators.length === 0);
+    });
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Suite 13 – application settings
+    // ════════════════════════════════════════════════════════════════════════
+    suite('application settings');
+
+    test('resetSettings restores all defaults', () => {
+      updateSettings({
+        showPercentage: false,
+        colorScheme: CUSTOM_COLOR_SCHEME,
+        customColor: '#FFFF00',
+        showSizeIndicators: true,
+        sizeIndicators: [{ omvang: 3, label: 'Mijlpaal' }],
+      });
+
+      resetSettings();
+      const settings = getSettings();
+
+      assert(settings.showPercentage === true);
+      assert(settings.colorScheme === 'blauw');
+      assert(settings.customColor === '#2563EB');
+      assert(settings.showSizeIndicators === false);
+      assert(Array.isArray(settings.sizeIndicators));
+      assert(settings.sizeIndicators.length === 0);
+    });
+
+    test('custom color palette derives background and readable text colors', () => {
+      const palette = getColorPalette({
+        colorScheme: CUSTOM_COLOR_SCHEME,
+        customColor: '#FFFF00',
+      });
+
+      assert(palette.fill === '#FFFF00');
+      assert(palette.bg !== palette.fill);
+      assert(palette.border !== palette.fill);
+      assert(typeof palette.text === 'string' && palette.text !== palette.fill);
+    });
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Render summary
+    // ════════════════════════════════════════════════════════════════════════
+    const total = passed + failed;
+    const summary = document.getElementById('summary');
+    summary.textContent = `${passed} / ${total} tests passed${failed > 0 ? ` — ${failed} FAILED` : ' — all green'}`;
+    summary.className = failed > 0 ? 'has-fail' : 'all-pass';
+  </script>
+</body>
+</html>
