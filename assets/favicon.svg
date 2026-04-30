@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#2563EB"></rect>
+
+  <!-- tree -->
+  <path d="M12 32 H26 M26 32 V18 M26 32 V46" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round"></path>
+  <path d="M26 18 H40 M26 32 H44 M26 46 H36" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round"></path>
+
+  <!-- progress (lichtere tinten voor nuance) -->
+  <rect x="40" y="14" width="16" height="8" rx="3" fill="#93C5FD"></rect>
+  <rect x="40" y="14" width="10" height="8" rx="3" fill="#FFFFFF"></rect>
+
+  <rect x="44" y="28" width="16" height="8" rx="3" fill="#93C5FD"></rect>
+  <rect x="44" y="28" width="12" height="8" rx="3" fill="#FFFFFF"></rect>
+
+  <rect x="36" y="42" width="16" height="8" rx="3" fill="#93C5FD"></rect>
+  <rect x="36" y="42" width="6" height="8" rx="3" fill="#FFFFFF"></rect>
+
+  <!-- root -->
+  <rect x="6" y="28" width="8" height="8" rx="2" fill="#FFFFFF"></rect>
+</svg>
