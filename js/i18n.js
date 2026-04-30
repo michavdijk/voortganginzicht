@@ -61,7 +61,7 @@ const translations = {
     'help.settings.nav':                'Instellingen',
     'help.settings.title':              'Instellingen',
     'help.settings.intro':              'Met de instellingen bepaal je wat er in de voortgangsplaat wordt getoond en hoe de omvang visueel wordt geduid. Je opent deze instellingen met het tandwiel bij de voortgangsplaat.',
-    'help.settings.item1':              'Percentage tonen bepaalt of voortgangspercentages zichtbaar zijn in de blokken.',
+    'help.settings.item1':              'Voortgangspercentages tonen bepaalt of voortgangspercentages zichtbaar zijn in de blokken.',
     'help.settings.item2':              'Kleurenschema wijzigt de hoofdkleur van de voortgangsbalken; met Aangepast kies je zelf een hoofdkleur.',
     'help.settings.item3':              'Omvangindicatoren tekenen verticale referentielijnen op de activiteitskolom, zodat je activiteitgroottes makkelijker kunt vergelijken.',
     'help.settings.item3.sub1':         'Zet omvangindicatoren aan en voeg per referentie een omvang en label toe.',
@@ -94,7 +94,7 @@ const translations = {
     'type.subdoel':                     'Subdoel',
     'type.activiteit':                  'Activiteit',
 
-    'settings.percentage':              'Percentage tonen',
+    'settings.percentage':              'Voortgangspercentages tonen',
     'settings.colorScheme':             'Kleurenschema',
     'settings.color.blauw':             'Blauw',
     'settings.color.rood':              'Rood',
