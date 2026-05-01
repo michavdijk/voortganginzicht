@@ -76,8 +76,8 @@ const translations = {
     'help.files.item3':                 'Download als PNG is beschikbaar zodra er een geldig voortgangsrapport is.',
     'help.files.item4':                 'Bestanden blijven op je eigen apparaat; de app slaat niets op de server op.',
 
-    'tree.empty.message':               'Er is nog geen project. Maak een Doel aan om te beginnen.',
-    'tree.empty.button':                'Maak een Doel aan',
+    'tree.empty.message':               'Er is nog geen Doel. Maak het Doel aan om te beginnen.',
+    'tree.empty.button':                'Maak het Doel aan',
     'tree.prompt.createGoal':           'Naam van het Doel:',
     'tree.prompt.createChild':          'Naam van de nieuwe knoop:',
     'tree.tooltip.omvangNotSet':        'Omvang is nog niet ingesteld',
@@ -211,8 +211,8 @@ const translations = {
     'help.files.item3':                 'Download as PNG is available once there is a valid progress report.',
     'help.files.item4':                 'Files stay on your own device; the app does not store anything on the server.',
 
-    'tree.empty.message':               'There is no project yet. Create a Goal to get started.',
-    'tree.empty.button':                'Create a Goal',
+    'tree.empty.message':               'There is no Goal yet. Create the Goal to get started.',
+    'tree.empty.button':                'Create the Goal',
     'tree.prompt.createGoal':           'Name of the Goal:',
     'tree.prompt.createChild':          'Name of the new node:',
     'tree.tooltip.omvangNotSet':        'Size has not been set yet',

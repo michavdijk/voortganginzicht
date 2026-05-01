@@ -36,6 +36,7 @@
   /* Button */
   --color-btn-bg:        #f1f5f9;
   --color-btn-hover:     #e2e8f0;
+  --color-btn-border-hover: #cbd5e1;
   --color-btn-primary:   #2563eb;
   --color-btn-primary-hover: #1d4ed8;
 
@@ -532,21 +533,28 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-btn-bg);
   color: var(--color-text);
   font-family: inherit;
   font-size: var(--font-size-sm);
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s;
+  transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
   white-space: nowrap;
   line-height: 1;
 }
 
 .btn:hover:not(:disabled) {
   background: var(--color-btn-hover);
+  border-color: var(--color-btn-border-hover);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-btn-primary);
+  outline-offset: 2px;
 }
 
 .btn:disabled {
@@ -555,18 +563,31 @@ body {
 }
 
 .btn--toolbar {
+  min-height: 32px;
   padding: 7px 14px;
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.btn--toolbar:hover:not(:disabled) {
+  background: var(--color-btn-bg);
 }
 
 .btn--primary {
+  min-height: 34px;
+  padding: 8px 14px;
   background: var(--color-btn-primary);
   color: #fff;
   border-color: var(--color-btn-primary);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgb(37 99 235 / 0.18);
 }
 
 .btn--primary:hover:not(:disabled) {
   background: var(--color-btn-primary-hover);
   border-color: var(--color-btn-primary-hover);
+  box-shadow: 0 2px 5px rgb(37 99 235 / 0.2);
 }
 
 /* Small icon buttons used in tree rows */
