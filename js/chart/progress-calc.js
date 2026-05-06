@@ -10,7 +10,7 @@ import { getType } from '../model/tree.js';
 /**
  * Calculate the weighted voortgangspercentage for a node.
  *
- * - Activiteit (leaf): returns node.voortgangspercentage directly.
+ * - Activiteit (leaf): returns node.voortgangspercentage, or 0 if left empty.
  * - Branch (Doel/Subdoel): weighted average of children, where each child's
  *   weight is its effectiveOmvang (total Activiteit omvang in its subtree).
  *
@@ -19,7 +19,7 @@ import { getType } from '../model/tree.js';
  */
 export function calcWeightedProgress(node) {
   if (getType(node) === 'Activiteit') {
-    return node.voortgangspercentage;
+    return node.voortgangspercentage ?? 0;
   }
 
   // Branch node: weighted average over children.

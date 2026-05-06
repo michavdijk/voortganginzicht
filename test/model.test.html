@@ -50,7 +50,7 @@
   <script type="module">
     // ─── Imports ─────────────────────────────────────────────────────────────
     import { on, off, emit } from '../js/events.js';
-    import { Knoop, getType, addChild, removeNode, renameNode, moveUp, moveDown, setOmvang, setVoortgang } from '../js/model/tree.js';
+    import { Knoop, getType, addChild, removeNode, renameNode, moveUp, moveDown, moveLevelUp, moveLevelDown, setOmvang, setVoortgang } from '../js/model/tree.js';
     import { validateNaam, validateOmvang, validatePercentage } from '../js/model/validation.js';
     import { getRoot, setRoot, isDirty, markClean, newProject } from '../js/model/project.js';
     import { CUSTOM_COLOR_SCHEME, getColorPalette, getSettings, updateSettings, resetSettings } from '../js/model/settings.js';
@@ -311,7 +311,7 @@
       assert(k.parent === null);
       assert(Array.isArray(k.kinderen) && k.kinderen.length === 0);
       assert(k.omvang === null);
-      assert(k.voortgangspercentage === 0);
+      assert(k.voortgangspercentage === null);
       assert(typeof k.id === 'string' && k.id.length > 0);
     }, 'SC-001');
 
@@ -417,7 +417,7 @@
       addChild(act, 'Subtaak');
 
       assert(act.omvang === null, 'omvang should be cleared when Activiteit becomes Subdoel');
-      assert(act.voortgangspercentage === 0, 'voortgang should be reset when Activiteit becomes Subdoel');
+      assert(act.voortgangspercentage === null, 'voortgang should be reset when Activiteit becomes Subdoel');
     }, 'SC-004');
 
     test('addChild trims leading/trailing whitespace in naam before validation', () => {
@@ -534,17 +534,17 @@
       const parent = addChild(root, 'Ouder');
       const kind = addChild(parent, 'Kind');
 
-      // Subdoelen should have null/0 for these fields (they were cleared on promotion)
+      // Subdoelen should have null for these fields (they were cleared on promotion)
       // Confirm the state before removal
       assert(parent.omvang === null);
-      assert(parent.voortgangspercentage === 0);
+      assert(parent.voortgangspercentage === null);
 
       removeNode(kind);
 
       // After last child removed, parent becomes Activiteit — fields stay cleared
       assert(getType(parent) === 'Activiteit');
       assert(parent.omvang === null, 'omvang should remain null after demotion');
-      assert(parent.voortgangspercentage === 0, 'voortgang should remain 0 after demotion');
+      assert(parent.voortgangspercentage === null, 'voortgang should remain null after demotion');
     }, 'EC-5');
 
     test('removing one of multiple children leaves siblings intact', () => {
@@ -723,6 +723,74 @@
       events._cleanup();
     });
 
+    test('moveLevelDown makes a node the child of its previous sibling', () => {
+      const root = makeRoot();
+      const a = addChild(root, 'A');
+      const b = addChild(root, 'B');
+      setOmvang(a, 5);
+      setVoortgang(a, 50);
+
+      const events = captureEvents('tree-changed');
+      moveLevelDown(b);
+
+      assert(root.kinderen.length === 1, 'Root should keep only A as direct child');
+      assert(root.kinderen[0] === a);
+      assert(a.kinderen[0] === b, 'B should become child of A');
+      assert(b.parent === a);
+      assert(getType(a) === 'Subdoel', 'A should become Subdoel');
+      assert(a.omvang === null, 'A should lose Activiteit-only omvang');
+      assert(a.voortgangspercentage === null, 'A should lose Activiteit-only voortgang');
+      assert(events.length === 1 && events[0].action === 'moveLevelDown');
+      events._cleanup();
+    });
+
+    test('moveLevelUp moves a nested node after its parent', () => {
+      const root = makeRoot();
+      const parent = addChild(root, 'Parent');
+      const child = addChild(parent, 'Child');
+      const other = addChild(root, 'Other');
+
+      const events = captureEvents('tree-changed');
+      moveLevelUp(child);
+
+      assert(root.kinderen[0] === parent);
+      assert(root.kinderen[1] === child, 'Child should be inserted after its old parent');
+      assert(root.kinderen[2] === other);
+      assert(child.parent === root);
+      assert(parent.kinderen.length === 0);
+      assert(getType(parent) === 'Activiteit', 'Parent should become Activiteit when empty');
+      assert(events.length === 1 && events[0].action === 'moveLevelUp');
+      events._cleanup();
+    });
+
+    test('moveLevelUp on a direct child of the root is a no-op', () => {
+      const root = makeRoot();
+      const child = addChild(root, 'Kind');
+
+      const events = captureEvents('tree-changed');
+      moveLevelUp(child);
+
+      assert(root.kinderen[0] === child);
+      assert(child.parent === root);
+      assert(events.length === 0, 'No second Doel should be created');
+      events._cleanup();
+    });
+
+    test('moveLevelDown on root or first sibling is a no-op', () => {
+      const root = makeRoot();
+      const first = addChild(root, 'Eerste');
+      addChild(root, 'Tweede');
+
+      const events = captureEvents('tree-changed');
+      moveLevelDown(root);
+      moveLevelDown(first);
+
+      assert(root.kinderen[0] === first);
+      assert(first.parent === root);
+      assert(events.length === 0);
+      events._cleanup();
+    });
+
     // ════════════════════════════════════════════════════════════════════════
     // Suite 9 – setOmvang / setVoortgang
     // ════════════════════════════════════════════════════════════════════════
@@ -792,6 +860,16 @@
 
       setVoortgang(act, 100);
       assert(act.voortgangspercentage === 100);
+    });
+
+    test('setVoortgang treats an empty value as null', () => {
+      const root = makeRoot();
+      const act = addChild(root, 'Taak');
+
+      setVoortgang(act, 75);
+      setVoortgang(act, '');
+
+      assert(act.voortgangspercentage === null);
     });
 
     test('setVoortgang throws on a Subdoel', () => {
@@ -978,6 +1056,7 @@
       assert(result.settings.showSizeIndicators === true);
       assert(result.settings.sizeIndicators.length === 1);
       assert(result.settings.sizeIndicators[0].label === 'Halverwege');
+      assert(result.root.kinderen[0].voortgangspercentage === null);
     });
 
     test('serializer preserves custom color settings', () => {

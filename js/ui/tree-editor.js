@@ -15,6 +15,8 @@ import {
   renameNode,
   moveUp,
   moveDown,
+  moveLevelUp,
+  moveLevelDown,
   setOmvang,
   setVoortgang,
   Knoop,
@@ -35,9 +37,18 @@ let _container = null;
 export function init(container) {
   _container = container;
 
-  on('tree-changed', () => renderTree(_container, getRoot()));
+  on('tree-changed', handleTreeChanged);
   on('project-loaded', () => renderTree(_container, getRoot()));
   on('language-changed', () => renderTree(_container, getRoot()));
+}
+
+function handleTreeChanged(event) {
+  if (event && ['setOmvang', 'clearOmvang', 'setVoortgang'].includes(event.action)) {
+    syncActivityFieldChange(event.node);
+    return;
+  }
+
+  renderTree(_container, getRoot());
 }
 
 /**
@@ -241,21 +252,30 @@ function buildOmvangInput(node) {
   input.title = t('tree.tooltip.omvang');
   if (node.omvang !== null) input.value = String(node.omvang);
 
+  let suppressNextChange = false;
+
+  input.addEventListener('keydown', (event) => {
+    if (!shouldHandleTabCommit(event) || !hasOmvangInputChanged(input, node)) return;
+
+    event.preventDefault();
+    const nextFocusTarget = getTabTarget(input, event.shiftKey);
+    if (!commitOmvangInput(input, node)) return;
+
+    if (nextFocusTarget) {
+      suppressNextChange = true;
+      focusTabTarget(nextFocusTarget);
+    } else {
+      input.blur();
+    }
+  });
+
   input.addEventListener('change', () => {
-    const raw = input.value.trim();
-    if (raw === '') {
-      // User cleared the field — reset to no omvang.
-      node.omvang = null;
-      emit('tree-changed', { action: 'clearOmvang', node });
+    if (suppressNextChange) {
+      suppressNextChange = false;
       return;
     }
-    try {
-      setOmvang(node, raw);
-    } catch (e) {
-      showError(e.message);
-      // Revert the input to the last valid value.
-      input.value = node.omvang !== null ? String(node.omvang) : '';
-    }
+
+    commitOmvangInput(input, node);
   });
 
   wrapper.appendChild(input);
@@ -273,16 +293,34 @@ function buildPercentageInput(node) {
   input.min = '0';
   input.max = '100';
   input.step = '1';
-  input.value = String(node.voortgangspercentage);
+  input.placeholder = '–';
+  input.value = formatVoortgangInputValue(node);
   input.title = t('tree.tooltip.voortgang');
 
-  input.addEventListener('change', () => {
-    try {
-      setVoortgang(node, input.value.trim());
-    } catch (e) {
-      showError(e.message);
-      input.value = String(node.voortgangspercentage);
+  let suppressNextChange = false;
+
+  input.addEventListener('keydown', (event) => {
+    if (!shouldHandleTabCommit(event) || !hasPercentageInputChanged(input, node)) return;
+
+    event.preventDefault();
+    const nextFocusTarget = getTabTarget(input, event.shiftKey);
+    if (!commitPercentageInput(input, node)) return;
+
+    if (nextFocusTarget) {
+      suppressNextChange = true;
+      focusTabTarget(nextFocusTarget);
+    } else {
+      input.blur();
     }
+  });
+
+  input.addEventListener('change', () => {
+    if (suppressNextChange) {
+      suppressNextChange = false;
+      return;
+    }
+
+    commitPercentageInput(input, node);
   });
 
   wrapper.appendChild(input);
@@ -292,6 +330,121 @@ function buildPercentageInput(node) {
   wrapper.appendChild(pct);
 
   return wrapper;
+}
+
+function commitOmvangInput(input, node) {
+  const raw = input.value.trim();
+
+  if (raw === '') {
+    // User cleared the field — reset to no omvang.
+    node.omvang = null;
+    emit('tree-changed', { action: 'clearOmvang', node });
+    return true;
+  }
+
+  try {
+    setOmvang(node, raw);
+    input.value = node.omvang !== null ? String(node.omvang) : '';
+    return true;
+  } catch (e) {
+    showError(e.message);
+    // Revert the input to the last valid value.
+    input.value = node.omvang !== null ? String(node.omvang) : '';
+    return false;
+  }
+}
+
+function commitPercentageInput(input, node) {
+  try {
+    setVoortgang(node, input.value.trim());
+    input.value = formatVoortgangInputValue(node);
+    return true;
+  } catch (e) {
+    showError(e.message);
+    input.value = formatVoortgangInputValue(node);
+    return false;
+  }
+}
+
+function hasOmvangInputChanged(input, node) {
+  const currentValue = node.omvang !== null ? String(node.omvang) : '';
+  return input.value.trim() !== currentValue;
+}
+
+function hasPercentageInputChanged(input, node) {
+  return input.value.trim() !== formatVoortgangInputValue(node);
+}
+
+function formatVoortgangInputValue(node) {
+  return node.voortgangspercentage === null ? '' : String(node.voortgangspercentage);
+}
+
+function shouldHandleTabCommit(event) {
+  return event.key === 'Tab' && !event.altKey && !event.ctrlKey && !event.metaKey;
+}
+
+function getTabTarget(current, reverse) {
+  const selector = [
+    'a[href]',
+    'button:not([disabled])',
+    'input:not([disabled]):not([type="hidden"])',
+    'select:not([disabled])',
+    'textarea:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
+  ].join(',');
+
+  const focusable = Array.from(document.querySelectorAll(selector))
+    .filter(el => el instanceof HTMLElement && isVisibleFocusable(el));
+  const index = focusable.indexOf(current);
+  if (index === -1) return null;
+
+  return focusable[index + (reverse ? -1 : 1)] || null;
+}
+
+function isVisibleFocusable(el) {
+  return el.tabIndex >= 0 && el.getClientRects().length > 0;
+}
+
+function focusTabTarget(target) {
+  const focus = () => {
+    if (target.isConnected) target.focus();
+  };
+
+  if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+    window.requestAnimationFrame(focus);
+  } else {
+    setTimeout(focus, 0);
+  }
+}
+
+function syncActivityFieldChange(node) {
+  if (!_container || !node) return;
+
+  const item = Array.from(_container.querySelectorAll('.tree__node'))
+    .find(el => el.dataset.nodeId === node.id);
+  if (!item) {
+    renderTree(_container, getRoot());
+    return;
+  }
+
+  const isIncomplete = getType(node) === 'Activiteit' && node.omvang === null;
+  item.classList.toggle('tree__node--incomplete', isIncomplete);
+
+  const row = item.firstElementChild;
+  const mainLine = row?.querySelector('.tree__node-row-main');
+  if (!mainLine) return;
+
+  let dot = mainLine.querySelector('.tree__incomplete-dot');
+  if (isIncomplete && !dot) {
+    dot = document.createElement('span');
+    dot.className = 'tree__incomplete-dot';
+    dot.title = t('tree.tooltip.omvangNotSet');
+    mainLine.prepend(dot);
+  } else if (!isIncomplete && dot) {
+    dot.remove();
+  } else if (dot) {
+    dot.title = t('tree.tooltip.omvangNotSet');
+  }
 }
 
 // ── Action buttons ───────────────────────────────────────────────────────────
@@ -307,6 +460,24 @@ function buildActionButtons(node, isFirst, isLast, type) {
   addBtn.title = t('tree.action.addChild');
   addBtn.addEventListener('click', () => handleAddChild(node));
   group.appendChild(addBtn);
+
+  // Move one level up button
+  const levelUpBtn = document.createElement('button');
+  levelUpBtn.className = 'btn btn--icon';
+  levelUpBtn.textContent = '←';
+  levelUpBtn.title = t('tree.action.moveLevelUp');
+  levelUpBtn.disabled = !canMoveLevelUp(node);
+  levelUpBtn.addEventListener('click', () => moveLevelUp(node));
+  group.appendChild(levelUpBtn);
+
+  // Move one level down button
+  const levelDownBtn = document.createElement('button');
+  levelDownBtn.className = 'btn btn--icon';
+  levelDownBtn.textContent = '→';
+  levelDownBtn.title = t('tree.action.moveLevelDown');
+  levelDownBtn.disabled = !canMoveLevelDown(node);
+  levelDownBtn.addEventListener('click', () => moveLevelDown(node));
+  group.appendChild(levelDownBtn);
 
   // Move up button
   const upBtn = document.createElement('button');
@@ -375,4 +546,13 @@ function isLastSibling(node) {
   if (!node.parent) return true;
   const siblings = node.parent.kinderen;
   return siblings[siblings.length - 1] === node;
+}
+
+function canMoveLevelUp(node) {
+  return Boolean(node.parent?.parent);
+}
+
+function canMoveLevelDown(node) {
+  if (!node.parent) return false;
+  return node.parent.kinderen.indexOf(node) > 0;
 }

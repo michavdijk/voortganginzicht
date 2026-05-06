@@ -23,6 +23,7 @@
  *
  * SerializedKnoop:
  *   { id, naam, omvang, voortgangspercentage, kinderen }
+ *   omvang and voortgangspercentage may be null when left empty.
  *   (parent is omitted — it is a runtime-only reference)
  */
 
@@ -208,14 +209,16 @@ function validateNode(raw, seenIds, path = 'doel') {
     }
   }
 
-  // voortgangspercentage — must be an integer 0–100
-  if (
-    typeof raw.voortgangspercentage !== 'number' ||
-    !Number.isInteger(raw.voortgangspercentage) ||
-    raw.voortgangspercentage < 0 ||
-    raw.voortgangspercentage > 100
-  ) {
-    return `Ongeldig knooppunt op "${path}": "voortgangspercentage" moet een geheel getal tussen 0 en 100 zijn.`;
+  // voortgangspercentage — must be an integer 0–100 or null
+  if (raw.voortgangspercentage !== null) {
+    if (
+      typeof raw.voortgangspercentage !== 'number' ||
+      !Number.isInteger(raw.voortgangspercentage) ||
+      raw.voortgangspercentage < 0 ||
+      raw.voortgangspercentage > 100
+    ) {
+      return `Ongeldig knooppunt op "${path}": "voortgangspercentage" moet een geheel getal tussen 0 en 100 of null zijn.`;
+    }
   }
 
   // kinderen — must be an array

@@ -18,8 +18,13 @@ export class Knoop {
     this.parent = parent;
     this.kinderen = [];
     this.omvang = null;
-    this.voortgangspercentage = 0;
+    this.voortgangspercentage = null;
   }
+}
+
+function clearActivityOnlyData(node) {
+  node.omvang = null;
+  node.voortgangspercentage = null;
 }
 
 /**
@@ -53,8 +58,7 @@ export function addChild(parent, naam) {
   // Clear its Activiteit-only data.
   const wasLeaf = parent.kinderen.length === 0;
   if (wasLeaf) {
-    parent.omvang = null;
-    parent.voortgangspercentage = 0;
+    clearActivityOnlyData(parent);
   }
 
   const child = new Knoop(naam, parent);
@@ -88,8 +92,7 @@ export function removeNode(node) {
 
   // If the parent now has no children it has become an Activiteit; clear its data.
   if (parent.kinderen.length === 0) {
-    parent.omvang = null;
-    parent.voortgangspercentage = 0;
+    clearActivityOnlyData(parent);
   }
 
   emit('tree-changed', { action: 'removeNode', parent, node });
@@ -144,6 +147,68 @@ export function moveDown(node) {
 }
 
 /**
+ * Move a node one level up, placing it directly after its current parent.
+ * Direct children of the root are not moved up, because there can only be
+ * one root Doel.
+ *
+ * @param {Knoop} node
+ */
+export function moveLevelUp(node) {
+  const parent = node.parent;
+  const grandparent = parent?.parent;
+  if (!parent || !grandparent) return;
+
+  const siblings = parent.kinderen;
+  const index = siblings.indexOf(node);
+  if (index === -1) return;
+
+  const parentSiblings = grandparent.kinderen;
+  const parentIndex = parentSiblings.indexOf(parent);
+  if (parentIndex === -1) return;
+
+  siblings.splice(index, 1);
+  node.parent = grandparent;
+  parentSiblings.splice(parentIndex + 1, 0, node);
+
+  if (parent.kinderen.length === 0) {
+    clearActivityOnlyData(parent);
+  }
+
+  emit('tree-changed', { action: 'moveLevelUp', node, oldParent: parent, newParent: grandparent });
+}
+
+/**
+ * Move a node one level down by making it the last child of its previous
+ * sibling. The root Doel cannot be moved down.
+ *
+ * @param {Knoop} node
+ */
+export function moveLevelDown(node) {
+  const oldParent = node.parent;
+  if (!oldParent) return;
+
+  const siblings = oldParent.kinderen;
+  const index = siblings.indexOf(node);
+  if (index <= 0) return;
+
+  const newParent = siblings[index - 1];
+  siblings.splice(index, 1);
+
+  if (newParent.kinderen.length === 0) {
+    clearActivityOnlyData(newParent);
+  }
+
+  node.parent = newParent;
+  newParent.kinderen.push(node);
+
+  if (oldParent.kinderen.length === 0) {
+    clearActivityOnlyData(oldParent);
+  }
+
+  emit('tree-changed', { action: 'moveLevelDown', node, oldParent, newParent });
+}
+
+/**
  * Set the omvang of a node. Only valid on Activiteiten.
  *
  * @param {Knoop} node
@@ -172,6 +237,11 @@ export function setOmvang(node, value) {
 export function setVoortgang(node, value) {
   if (getType(node) !== 'Activiteit') {
     throw new Error(t('validation.voortgang.onlyActiviteit'));
+  }
+  if (String(value ?? '').trim() === '') {
+    node.voortgangspercentage = null;
+    emit('tree-changed', { action: 'setVoortgang', node });
+    return;
   }
   const validation = validatePercentage(value);
   if (!validation.valid) {

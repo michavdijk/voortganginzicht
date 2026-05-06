@@ -229,33 +229,58 @@ body {
   min-width: 0;
 }
 
-.project-name-input {
+.project-name-title {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   font-family: inherit;
   font-size: 1rem;
   font-weight: 600;
   color: var(--color-text);
   background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 6px 8px;
   width: 100%;
   max-width: 400px;
+  min-width: 0;
   text-align: center;
-  outline: none;
-  transition: border-color 0.12s;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 
-.project-name-input::placeholder {
+.project-name-title--empty {
   color: var(--color-text-muted);
-  font-weight: 400;
+  font-weight: 500;
 }
 
-.project-name-input:hover {
-  border-bottom-color: var(--color-border);
+.project-name-title:hover {
+  background: var(--color-btn-bg);
+  border-color: var(--color-border);
 }
 
-.project-name-input:focus {
-  border-bottom-color: var(--color-btn-primary);
+.project-name-title:focus-visible {
+  outline: 2px solid var(--color-btn-primary);
+  outline-offset: 2px;
+}
+
+.project-name-title__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-name-title__icon {
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: opacity 0.12s;
+}
+
+.project-name-title:hover .project-name-title__icon,
+.project-name-title:focus-visible .project-name-title__icon {
+  opacity: 0.9;
 }
 
 /* ============================================================

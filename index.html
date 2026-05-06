@@ -28,14 +28,22 @@
     </div>
     <div class="project-name-wrap">
       <input
-        type="text"
+        type="hidden"
         id="project-name"
-        class="project-name-input"
-        placeholder="Projectnaam..."
-        maxlength="100"
-        autocomplete="off"
-        spellcheck="false"
       />
+      <button
+        type="button"
+        id="project-name-display"
+        class="project-name-title project-name-title--empty"
+        title="Project hernoemen"
+        aria-label="Project hernoemen"
+      >
+        <span class="project-name-title__text">Naamloos project</span>
+        <svg class="project-name-title__icon" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M12 20h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
+      </button>
     </div>
     <div id="toolbar"></div>
     <div id="lang-switcher" class="lang-switcher"></div>

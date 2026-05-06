@@ -24,6 +24,8 @@ import { renderChart } from './chart/renderer.js';
 import { getType } from './model/tree.js';
 import { t } from './i18n.js';
 
+const PROJECT_NAME_MAX_LENGTH = 100;
+
 document.addEventListener('DOMContentLoaded', () => {
   const toolbarEl     = document.getElementById('toolbar');
   const treeEditorEl  = document.getElementById('tree-editor');
@@ -44,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initTreePanelToggle();
   initSettingsDrawer();
+  initProjectNameTitle();
   applyStaticTranslations();
   on('language-changed', applyStaticTranslations);
 
@@ -234,12 +237,11 @@ async function handleNewProject() {
 
   const trimmedName = projectName.trim();
 
-  const nameEl = document.getElementById('project-name');
   resetSettings();
   refreshSettingsPanel();
   newProject();
   setTreePanelCollapsed(false);
-  if (nameEl) nameEl.value = trimmedName;
+  setProjectName(trimmedName);
   if (trimmedName) markDirty();
   showSuccess(t('success.newProject'));
 }
@@ -264,8 +266,7 @@ async function handleLoad() {
   setRoot(result.root);
   updateSettings(result.settings);
   refreshSettingsPanel();
-  const nameEl = document.getElementById('project-name');
-  if (nameEl) nameEl.value = result.projectnaam || '';
+  setProjectName(result.projectnaam || '');
   setTreePanelCollapsed(false);
   markClean();
   emit('project-loaded', result.root);
@@ -274,7 +275,7 @@ async function handleLoad() {
 
 async function handleSave() {
   const root       = getRoot();
-  const projectnaam = (document.getElementById('project-name')?.value ?? '').trim();
+  const projectnaam = getProjectName();
   const jsonString = serialize(root, getSettings(), projectnaam);
   const filename   = `${projectSlug()}.voortganginzicht.json`;
 
@@ -359,8 +360,58 @@ async function handleDownload() {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+function initProjectNameTitle() {
+  const display = document.getElementById('project-name-display');
+  if (!display) return;
+
+  display.addEventListener('click', promptForProjectName);
+  updateProjectNameDisplay();
+}
+
+function promptForProjectName() {
+  const currentName = getProjectName();
+  const nextName = prompt(t('project.prompt.name'), currentName);
+  if (nextName === null) return;
+  setProjectName(nextName, { markChanged: true });
+}
+
+function getProjectName() {
+  const input = document.getElementById('project-name');
+  return normalizeProjectName(input?.value ?? '');
+}
+
+function setProjectName(name, options = {}) {
+  const input = document.getElementById('project-name');
+  const previousName = getProjectName();
+  const nextName = normalizeProjectName(name);
+
+  if (input) input.value = nextName;
+  updateProjectNameDisplay();
+
+  if (options.markChanged && nextName !== previousName) {
+    markDirty();
+  }
+}
+
+function normalizeProjectName(name) {
+  return String(name ?? '').trim().slice(0, PROJECT_NAME_MAX_LENGTH);
+}
+
+function updateProjectNameDisplay() {
+  const display = document.getElementById('project-name-display');
+  const text = display?.querySelector('.project-name-title__text');
+  if (!display || !text) return;
+
+  const projectName = getProjectName();
+  const label = projectName ? `${projectName}. ${t('project.rename')}` : t('project.rename');
+  text.textContent = projectName || t('project.untitled');
+  display.classList.toggle('project-name-title--empty', !projectName);
+  display.title = t('project.rename');
+  display.setAttribute('aria-label', label);
+}
+
 function projectSlug() {
-  const naam = (document.getElementById('project-name')?.value ?? '').trim();
+  const naam = getProjectName();
   const slug = naam
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9\s_-]/gi, '')
@@ -381,8 +432,7 @@ function escapeHtml(str) {
 function applyStaticTranslations() {
   document.documentElement.lang = t('app.doc.lang');
 
-  const nameInput = document.getElementById('project-name');
-  if (nameInput) nameInput.placeholder = t('project.placeholder');
+  updateProjectNameDisplay();
 
   const treePanel = document.getElementById('tree-panel');
   if (treePanel) treePanel.setAttribute('aria-label', t('panel.tree.ariaLabel'));
