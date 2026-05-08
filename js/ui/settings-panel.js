@@ -161,15 +161,13 @@ function buildSizeIndicatorList(indicators) {
 
   addButton.addEventListener('click', () => {
     const current = getSettings().sizeIndicators;
-    const nextNumber = current.length + 1;
-    const previousMax = current.reduce((max, indicator) => Math.max(max, indicator.omvang), 0);
     updateSettings({
       showSizeIndicators: true,
       sizeIndicators: [
         ...current,
         {
-          omvang: Math.max(1, previousMax + 1),
-          label: t('settings.sizeIndicator.defaultLabel', { number: nextNumber }),
+          omvang: null,
+          label: '',
         },
       ],
     });
@@ -260,14 +258,25 @@ function buildSizeIndicatorRow(indicator, index) {
   omvangInput.className = 'settings-panel__input';
   omvangInput.min = '1';
   omvangInput.step = '1';
-  omvangInput.required = true;
-  omvangInput.value = String(currentIndicator.omvang);
+  omvangInput.value = formatOmvangValue(currentIndicator.omvang);
   omvangInput.addEventListener('change', () => {
+    if (omvangInput.validity.badInput) {
+      showError(t('validation.omvang.mustBeInt'));
+      omvangInput.value = formatOmvangValue(currentIndicator.omvang);
+      return;
+    }
+
     const raw = omvangInput.value.trim();
+    if (raw === '') {
+      currentIndicator.omvang = null;
+      updateSizeIndicator(index, { omvang: null });
+      return;
+    }
+
     const validation = validateOmvang(raw);
     if (!validation.valid) {
       showError(validation.error);
-      omvangInput.value = String(currentIndicator.omvang);
+      omvangInput.value = formatOmvangValue(currentIndicator.omvang);
       return;
     }
     currentIndicator.omvang = Number(raw);
@@ -281,19 +290,19 @@ function buildSizeIndicatorRow(indicator, index) {
   const labelInput = document.createElement('input');
   labelInput.type = 'text';
   labelInput.className = 'settings-panel__input';
-  labelInput.required = true;
   labelInput.maxLength = 80;
-  labelInput.value = currentIndicator.label;
+  labelInput.value = currentIndicator.label ?? '';
   labelInput.addEventListener('change', () => {
     const label = labelInput.value.trim();
     if (label.length === 0) {
-      showError(t('validation.sizeIndicator.labelRequired'));
-      labelInput.value = currentIndicator.label;
+      currentIndicator.label = '';
+      labelInput.value = '';
+      updateSizeIndicator(index, { label: '' });
       return;
     }
     if (label.length > 80) {
       showError(t('validation.sizeIndicator.labelTooLong'));
-      labelInput.value = currentIndicator.label;
+      labelInput.value = currentIndicator.label ?? '';
       return;
     }
     labelInput.value = label;
@@ -320,6 +329,10 @@ function buildSizeIndicatorRow(indicator, index) {
   row.appendChild(removeButton);
 
   return row;
+}
+
+function formatOmvangValue(omvang) {
+  return omvang === null || omvang === undefined ? '' : String(omvang);
 }
 
 function buildIndicatorField(labelText) {

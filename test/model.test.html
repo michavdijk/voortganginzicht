@@ -53,7 +53,7 @@
     import { Knoop, getType, addChild, removeNode, renameNode, moveUp, moveDown, moveLevelUp, moveLevelDown, setOmvang, setVoortgang } from '../js/model/tree.js';
     import { validateNaam, validateOmvang, validatePercentage } from '../js/model/validation.js';
     import { getRoot, setRoot, isDirty, markClean, newProject } from '../js/model/project.js';
-    import { CUSTOM_COLOR_SCHEME, getColorPalette, getSettings, updateSettings, resetSettings } from '../js/model/settings.js';
+    import { CUSTOM_COLOR_SCHEME, getColorPalette, getSettings, updateSettings, resetSettings, normalizeSizeIndicators } from '../js/model/settings.js';
     import { computeLayout, FIXED_WIDTH, TEXT_H_PADDING, wrapTextToWidth } from '../js/chart/layout.js';
     import { serialize, deserialize } from '../js/io/serializer.js';
 
@@ -1059,6 +1059,24 @@
       assert(result.root.kinderen[0].voortgangspercentage === null);
     });
 
+    test('serializer omits incomplete size indicator settings', () => {
+      const json = serialize(null, {
+        showPercentage: true,
+        colorScheme: 'blauw',
+        showSizeIndicators: true,
+        sizeIndicators: [
+          { omvang: null, label: '' },
+          { omvang: 4, label: 'Halverwege' },
+        ],
+      }, 'Testproject');
+      const doc = JSON.parse(json);
+
+      assert(doc.instellingen.showSizeIndicators === true);
+      assert(doc.instellingen.sizeIndicators.length === 1);
+      assert(doc.instellingen.sizeIndicators[0].omvang === 4);
+      assert(doc.instellingen.sizeIndicators[0].label === 'Halverwege');
+    });
+
     test('serializer preserves custom color settings', () => {
       const json = serialize(null, {
         showPercentage: true,
@@ -1116,6 +1134,22 @@
       assert(settings.showSizeIndicators === false);
       assert(Array.isArray(settings.sizeIndicators));
       assert(settings.sizeIndicators.length === 0);
+    });
+
+    test('settings preserve empty size indicator rows while active indicators stay complete-only', () => {
+      resetSettings();
+      updateSettings({
+        showSizeIndicators: true,
+        sizeIndicators: [{ omvang: null, label: '' }],
+      });
+
+      const settings = getSettings();
+
+      assert(settings.showSizeIndicators === true);
+      assert(settings.sizeIndicators.length === 1);
+      assert(settings.sizeIndicators[0].omvang === null);
+      assert(settings.sizeIndicators[0].label === '');
+      assert(normalizeSizeIndicators(settings.sizeIndicators).length === 0);
     });
 
     test('custom color palette derives background and readable text colors', () => {

@@ -53,7 +53,7 @@ const DEFAULT_SETTINGS = {
  * Convert the in-memory tree, settings and project name to a JSON string.
  *
  * @param {import('../model/tree.js').Knoop | null} root
- * @param {{ showPercentage: boolean, colorScheme: string, customColor?: string, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number, label: string }> }} settings
+ * @param {{ showPercentage: boolean, colorScheme: string, customColor?: string, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }> }} settings
  * @param {string} [projectnaam]
  * @returns {string} JSON string
  */

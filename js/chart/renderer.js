@@ -43,7 +43,7 @@ const PROGRESS_LABEL_GAP    = 8;
  *
  * @param {HTMLElement} container
  * @param {import('../model/tree.js').Knoop} root
- * @param {{ showPercentage: boolean, colorScheme: string, customColor?: string, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number, label: string }> }} settings
+ * @param {{ showPercentage: boolean, colorScheme: string, customColor?: string, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }> }} settings
  */
 export function renderChart(container, root, settings = { showPercentage: true, colorScheme: 'blauw' }) {
   // Measure available width via a cascade of fallbacks.

@@ -113,7 +113,6 @@ const translations = {
     'settings.sizeIndicator.label':     'Label',
     'settings.sizeIndicator.add':       'Indicator toevoegen',
     'settings.sizeIndicator.remove':    'Verwijder indicator',
-    'settings.sizeIndicator.defaultLabel': 'Indicator {number}',
     'settings.drawer.open':             'Instellingen openen',
     'settings.drawer.close':            'Instellingen sluiten',
 
@@ -251,7 +250,6 @@ const translations = {
     'settings.sizeIndicator.label':     'Label',
     'settings.sizeIndicator.add':       'Add indicator',
     'settings.sizeIndicator.remove':    'Remove indicator',
-    'settings.sizeIndicator.defaultLabel': 'Indicator {number}',
     'settings.drawer.open':             'Open settings',
     'settings.drawer.close':            'Close settings',
 

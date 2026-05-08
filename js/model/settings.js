@@ -7,8 +7,9 @@
  */
 
 /** @typedef {{ omvang: number, label: string }} SizeIndicator */
+/** @typedef {{ omvang: number | null, label: string }} EditableSizeIndicator */
 /** @typedef {{ fill: string, bg: string, border: string, text?: string }} ColorPalette */
-/** @typedef {{ showPercentage: boolean, colorScheme: string, customColor: string, showSizeIndicators: boolean, sizeIndicators: SizeIndicator[] }} Settings */
+/** @typedef {{ showPercentage: boolean, colorScheme: string, customColor: string, showSizeIndicators: boolean, sizeIndicators: EditableSizeIndicator[] }} Settings */
 
 export const CUSTOM_COLOR_SCHEME = 'aangepast';
 export const DEFAULT_CUSTOM_COLOR = '#2563EB';
@@ -78,7 +79,7 @@ export function updateSettings(patch) {
     _settings.showSizeIndicators = Boolean(patch.showSizeIndicators);
   }
   if ('sizeIndicators' in patch) {
-    _settings.sizeIndicators = normalizeSizeIndicators(patch.sizeIndicators);
+    _settings.sizeIndicators = normalizeEditableSizeIndicators(patch.sizeIndicators);
   }
 }
 
@@ -107,6 +108,23 @@ export function normalizeSizeIndicators(raw) {
 }
 
 /**
+ * Return a sanitized copy of the editable indicator list used by settings UI.
+ * Empty fields are preserved so newly added rows can start blank.
+ * @param {*} raw
+ * @returns {EditableSizeIndicator[]}
+ */
+function normalizeEditableSizeIndicators(raw) {
+  if (!Array.isArray(raw)) return [];
+
+  const indicators = [];
+  for (const item of raw) {
+    const indicator = normalizeEditableSizeIndicator(item);
+    if (indicator) indicators.push(indicator);
+  }
+  return indicators;
+}
+
+/**
  * @param {*} raw
  * @returns {SizeIndicator | null}
  */
@@ -118,6 +136,27 @@ export function normalizeSizeIndicator(raw) {
 
   if (!Number.isInteger(omvang) || omvang < 1) return null;
   if (label.length < 1 || label.length > MAX_SIZE_INDICATOR_LABEL_LENGTH) return null;
+
+  return { omvang, label };
+}
+
+/**
+ * @param {*} raw
+ * @returns {EditableSizeIndicator | null}
+ */
+function normalizeEditableSizeIndicator(raw) {
+  if (typeof raw !== 'object' || raw === null) return null;
+
+  const label = typeof raw.label === 'string' ? raw.label.trim() : '';
+  if (label.length > MAX_SIZE_INDICATOR_LABEL_LENGTH) return null;
+
+  const rawOmvang = raw.omvang;
+  if (rawOmvang === null || rawOmvang === undefined || rawOmvang === '') {
+    return { omvang: null, label };
+  }
+
+  const omvang = Number(rawOmvang);
+  if (!Number.isInteger(omvang) || omvang < 1) return null;
 
   return { omvang, label };
 }
@@ -169,8 +208,8 @@ function createCustomPalette(raw) {
 }
 
 /**
- * @param {SizeIndicator[]} indicators
- * @returns {SizeIndicator[]}
+ * @param {EditableSizeIndicator[]} indicators
+ * @returns {EditableSizeIndicator[]}
  */
 function copySizeIndicators(indicators) {
   return indicators.map(indicator => ({ ...indicator }));
