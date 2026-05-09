@@ -104,7 +104,7 @@ function autoRender() {
   if (!chartBody) return;
 
   if (!root || !canRender(root)) {
-    chartBody.innerHTML = `<div class="chart-placeholder"><p>${escapeHtml(t('chart.placeholder'))}</p></div>`;
+    chartBody.innerHTML = buildChartPlaceholder(root);
     _lastRenderWidth = 0;
     return;
   }
@@ -126,6 +126,24 @@ function hasAnyActiviteit(node) {
 function allActiviteitenHaveOmvang(node) {
   if (getType(node) === 'Activiteit') return node.omvang !== null;
   return node.kinderen.every(allActiviteitenHaveOmvang);
+}
+
+function buildChartPlaceholder(root) {
+  return `<div class="chart-placeholder"><p>${escapeHtml(chartPlaceholderMessage(root))}</p></div>`;
+}
+
+function chartPlaceholderMessage(root) {
+  if (!root) return t('chart.placeholder.empty');
+  if (!hasAnyActiviteit(root)) return t('chart.placeholder.noActivities');
+
+  const missingCount = countActiviteitenWithoutOmvang(root);
+  if (missingCount === 1) return t('chart.placeholder.missingOmvang.one');
+  return t('chart.placeholder.missingOmvang.many', { count: missingCount });
+}
+
+function countActiviteitenWithoutOmvang(node) {
+  if (getType(node) === 'Activiteit') return node.omvang === null ? 1 : 0;
+  return node.kinderen.reduce((count, child) => count + countActiviteitenWithoutOmvang(child), 0);
 }
 
 // ── Tree panel collapse ──────────────────────────────────────────────────────

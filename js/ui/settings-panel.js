@@ -252,64 +252,77 @@ function buildSizeIndicatorRow(indicator, index) {
   const row = document.createElement('div');
   row.className = 'settings-panel__indicator-row';
 
-  const omvangField = buildIndicatorField(t('settings.sizeIndicator.omvang'));
+  const { field: omvangField, error: omvangError } = buildIndicatorField(
+    t('settings.sizeIndicator.omvang'),
+    `settings-size-indicator-${index}-omvang-error`
+  );
   const omvangInput = document.createElement('input');
   omvangInput.type = 'number';
   omvangInput.className = 'settings-panel__input';
   omvangInput.min = '1';
   omvangInput.step = '1';
   omvangInput.value = formatOmvangValue(currentIndicator.omvang);
+  omvangInput.setAttribute('aria-describedby', omvangError.id);
+  omvangInput.addEventListener('input', () => clearFieldError(omvangInput));
   omvangInput.addEventListener('change', () => {
     if (omvangInput.validity.badInput) {
-      showError(t('validation.omvang.mustBeInt'));
-      omvangInput.value = formatOmvangValue(currentIndicator.omvang);
+      setFieldError(omvangInput, t('validation.omvang.mustBeInt'));
       return;
     }
 
     const raw = omvangInput.value.trim();
     if (raw === '') {
       currentIndicator.omvang = null;
+      clearFieldError(omvangInput);
       updateSizeIndicator(index, { omvang: null });
       return;
     }
 
     const validation = validateOmvang(raw);
     if (!validation.valid) {
-      showError(validation.error);
-      omvangInput.value = formatOmvangValue(currentIndicator.omvang);
+      setFieldError(omvangInput, validation.error);
       return;
     }
     currentIndicator.omvang = Number(raw);
+    clearFieldError(omvangInput);
     updateSizeIndicator(index, { omvang: currentIndicator.omvang });
   });
   omvangField.appendChild(omvangInput);
+  omvangField.appendChild(omvangError);
   row.appendChild(omvangField);
 
-  const labelField = buildIndicatorField(t('settings.sizeIndicator.label'));
+  const { field: labelField, error: labelError } = buildIndicatorField(
+    t('settings.sizeIndicator.label'),
+    `settings-size-indicator-${index}-label-error`
+  );
   labelField.classList.add('settings-panel__field--label');
   const labelInput = document.createElement('input');
   labelInput.type = 'text';
   labelInput.className = 'settings-panel__input';
   labelInput.maxLength = 80;
   labelInput.value = currentIndicator.label ?? '';
+  labelInput.setAttribute('aria-describedby', labelError.id);
+  labelInput.addEventListener('input', () => clearFieldError(labelInput));
   labelInput.addEventListener('change', () => {
     const label = labelInput.value.trim();
     if (label.length === 0) {
       currentIndicator.label = '';
       labelInput.value = '';
+      clearFieldError(labelInput);
       updateSizeIndicator(index, { label: '' });
       return;
     }
     if (label.length > 80) {
-      showError(t('validation.sizeIndicator.labelTooLong'));
-      labelInput.value = currentIndicator.label ?? '';
+      setFieldError(labelInput, t('validation.sizeIndicator.labelTooLong'));
       return;
     }
     labelInput.value = label;
     currentIndicator.label = label;
+    clearFieldError(labelInput);
     updateSizeIndicator(index, { label });
   });
   labelField.appendChild(labelInput);
+  labelField.appendChild(labelError);
   row.appendChild(labelField);
 
   const removeButton = document.createElement('button');
@@ -335,7 +348,7 @@ function formatOmvangValue(omvang) {
   return omvang === null || omvang === undefined ? '' : String(omvang);
 }
 
-function buildIndicatorField(labelText) {
+function buildIndicatorField(labelText, errorId) {
   const field = document.createElement('label');
   field.className = 'settings-panel__field';
 
@@ -344,7 +357,38 @@ function buildIndicatorField(labelText) {
   label.textContent = labelText;
   field.appendChild(label);
 
-  return field;
+  const error = document.createElement('span');
+  error.id = errorId;
+  error.className = 'settings-panel__field-error';
+  error.setAttribute('aria-live', 'polite');
+  error.hidden = true;
+
+  return { field, error };
+}
+
+function setFieldError(input, message) {
+  const field = input.closest('.settings-panel__field');
+  const error = field?.querySelector('.settings-panel__field-error');
+  if (!field || !error) {
+    showError(message);
+    return;
+  }
+
+  input.setAttribute('aria-invalid', 'true');
+  field.classList.add('settings-panel__field--error');
+  error.textContent = message;
+  error.hidden = false;
+}
+
+function clearFieldError(input) {
+  const field = input.closest('.settings-panel__field');
+  const error = field?.querySelector('.settings-panel__field-error');
+  if (!field || !error) return;
+
+  input.removeAttribute('aria-invalid');
+  field.classList.remove('settings-panel__field--error');
+  error.textContent = '';
+  error.hidden = true;
 }
 
 function updateSizeIndicator(index, patch) {

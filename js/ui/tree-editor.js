@@ -166,6 +166,7 @@ function buildNodeElement(node) {
     fieldsLine.className = 'tree__node-row-fields';
     fieldsLine.appendChild(buildOmvangInput(node));
     fieldsLine.appendChild(buildPercentageInput(node));
+    if (node.omvang === null) fieldsLine.appendChild(buildIncompleteHint());
     row.appendChild(fieldsLine);
   }
 
@@ -239,9 +240,7 @@ function startInlineEdit(nameSpan, node) {
 // ── Omvang / percentage inputs ───────────────────────────────────────────────
 
 function buildOmvangInput(node) {
-  const wrapper = document.createElement('label');
-  wrapper.className = 'tree__field-label';
-  wrapper.textContent = t('tree.field.omvang');
+  const { wrapper, error } = buildFieldShell(t('tree.field.omvang'), node, 'omvang');
 
   const input = document.createElement('input');
   input.type = 'number';
@@ -249,9 +248,12 @@ function buildOmvangInput(node) {
   input.min = '1';
   input.step = '1';
   input.title = t('tree.tooltip.omvang');
+  input.setAttribute('aria-describedby', error.id);
   if (node.omvang !== null) input.value = String(node.omvang);
 
   let suppressNextChange = false;
+
+  input.addEventListener('input', () => clearFieldError(input));
 
   input.addEventListener('keydown', (event) => {
     if (!shouldHandleTabCommit(event) || !hasOmvangInputChanged(input, node)) return;
@@ -278,13 +280,12 @@ function buildOmvangInput(node) {
   });
 
   wrapper.appendChild(input);
+  wrapper.appendChild(error);
   return wrapper;
 }
 
 function buildPercentageInput(node) {
-  const wrapper = document.createElement('label');
-  wrapper.className = 'tree__field-label';
-  wrapper.textContent = t('tree.field.voortgang');
+  const { wrapper, error } = buildFieldShell(t('tree.field.voortgang'), node, 'voortgang');
 
   const input = document.createElement('input');
   input.type = 'number';
@@ -294,8 +295,11 @@ function buildPercentageInput(node) {
   input.step = '1';
   input.value = formatVoortgangInputValue(node);
   input.title = t('tree.tooltip.voortgang');
+  input.setAttribute('aria-describedby', error.id);
 
   let suppressNextChange = false;
+
+  input.addEventListener('input', () => clearFieldError(input));
 
   input.addEventListener('keydown', (event) => {
     if (!shouldHandleTabCommit(event) || !hasPercentageInputChanged(input, node)) return;
@@ -326,16 +330,23 @@ function buildPercentageInput(node) {
   const pct = document.createElement('span');
   pct.textContent = '%';
   wrapper.appendChild(pct);
+  wrapper.appendChild(error);
 
   return wrapper;
 }
 
 function commitOmvangInput(input, node) {
+  if (input.validity.badInput) {
+    setFieldError(input, t('validation.omvang.mustBeInt'));
+    return false;
+  }
+
   const raw = input.value.trim();
 
   if (raw === '') {
     // User cleared the field — reset to no omvang.
     node.omvang = null;
+    clearFieldError(input);
     emit('tree-changed', { action: 'clearOmvang', node });
     return true;
   }
@@ -343,38 +354,92 @@ function commitOmvangInput(input, node) {
   try {
     setOmvang(node, raw);
     input.value = node.omvang !== null ? String(node.omvang) : '';
+    clearFieldError(input);
     return true;
   } catch (e) {
-    showError(e.message);
-    // Revert the input to the last valid value.
-    input.value = node.omvang !== null ? String(node.omvang) : '';
+    setFieldError(input, e.message);
     return false;
   }
 }
 
 function commitPercentageInput(input, node) {
+  if (input.validity.badInput) {
+    setFieldError(input, t('validation.percentage.mustBeInt'));
+    return false;
+  }
+
   try {
     setVoortgang(node, input.value.trim());
     input.value = formatVoortgangInputValue(node);
+    clearFieldError(input);
     return true;
   } catch (e) {
-    showError(e.message);
-    input.value = formatVoortgangInputValue(node);
+    setFieldError(input, e.message);
     return false;
   }
 }
 
 function hasOmvangInputChanged(input, node) {
   const currentValue = node.omvang !== null ? String(node.omvang) : '';
-  return input.value.trim() !== currentValue;
+  return input.validity.badInput || input.value.trim() !== currentValue;
 }
 
 function hasPercentageInputChanged(input, node) {
-  return input.value.trim() !== formatVoortgangInputValue(node);
+  return input.validity.badInput || input.value.trim() !== formatVoortgangInputValue(node);
 }
 
 function formatVoortgangInputValue(node) {
   return node.voortgangspercentage === null ? '' : String(node.voortgangspercentage);
+}
+
+function buildFieldShell(labelText, node, fieldName) {
+  const wrapper = document.createElement('label');
+  wrapper.className = 'tree__field-label';
+
+  const label = document.createElement('span');
+  label.className = 'tree__field-label-text';
+  label.textContent = labelText;
+  wrapper.appendChild(label);
+
+  const error = document.createElement('span');
+  error.id = `tree-field-error-${node.id}-${fieldName}`;
+  error.className = 'tree__field-error';
+  error.setAttribute('aria-live', 'polite');
+  error.hidden = true;
+
+  return { wrapper, error };
+}
+
+function buildIncompleteHint() {
+  const hint = document.createElement('span');
+  hint.className = 'tree__incomplete-hint';
+  hint.textContent = t('tree.incomplete.omvangRequired');
+  return hint;
+}
+
+function setFieldError(input, message) {
+  const field = input.closest('.tree__field-label');
+  const error = field?.querySelector('.tree__field-error');
+  if (!field || !error) {
+    showError(message);
+    return;
+  }
+
+  input.setAttribute('aria-invalid', 'true');
+  field.classList.add('tree__field-label--error');
+  error.textContent = message;
+  error.hidden = false;
+}
+
+function clearFieldError(input) {
+  const field = input.closest('.tree__field-label');
+  const error = field?.querySelector('.tree__field-error');
+  if (!field || !error) return;
+
+  input.removeAttribute('aria-invalid');
+  field.classList.remove('tree__field-label--error');
+  error.textContent = '';
+  error.hidden = true;
 }
 
 function shouldHandleTabCommit(event) {
@@ -447,6 +512,18 @@ function syncActivityFieldChange(node) {
     dot.remove();
   } else if (dot) {
     dot.title = t('tree.tooltip.omvangNotSet');
+  }
+
+  const fieldsLine = row?.querySelector('.tree__node-row-fields');
+  if (!fieldsLine) return;
+
+  let hint = fieldsLine.querySelector('.tree__incomplete-hint');
+  if (isIncomplete && !hint) {
+    fieldsLine.appendChild(buildIncompleteHint());
+  } else if (!isIncomplete && hint) {
+    hint.remove();
+  } else if (hint) {
+    hint.textContent = t('tree.incomplete.omvangRequired');
   }
 }
 
