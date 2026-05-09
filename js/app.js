@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initTreePanelToggle();
   initSettingsDrawer();
   initProjectNameTitle();
+  initVersionInfo();
   applyStaticTranslations();
   on('language-changed', applyStaticTranslations);
 
@@ -453,4 +454,30 @@ function applyStaticTranslations() {
 function refreshSettingsPanel() {
   const settingsPanelEl = document.getElementById('settings-panel');
   if (settingsPanelEl) initSettingsPanel(settingsPanelEl);
+}
+
+function initVersionInfo() {
+  const versionEl = document.getElementById('app-version');
+  if (!versionEl || typeof fetch !== 'function') return;
+
+  fetch('./version.json', { cache: 'no-store' })
+    .then(response => (response.ok ? response.json() : null))
+    .then(metadata => {
+      const version = typeof metadata?.version === 'string' ? metadata.version.trim() : '';
+      if (!version) return;
+
+      versionEl.textContent = `Versie ${version}`;
+
+      const date = typeof metadata?.date === 'string' ? metadata.date.trim() : '';
+      const commit = typeof metadata?.commit === 'string' ? metadata.commit.trim() : '';
+      const details = [
+        date ? `Datum: ${date}` : '',
+        commit ? `Commit: ${commit}` : '',
+      ].filter(Boolean).join(' - ');
+
+      if (details) versionEl.title = details;
+    })
+    .catch(() => {
+      // version.json is generated during deploy; local/dev copies may not have it.
+    });
 }
