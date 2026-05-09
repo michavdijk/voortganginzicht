@@ -74,7 +74,6 @@
 <body>
   <main>
     <svg class="logo" width="520" height="64" viewBox="0 0 520 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="voortganginzicht.nl">
-      <rect width="520" height="64" fill="#ffffff"></rect>
       <g transform="translate(12 18) scale(0.85)">
         <path d="M8 24 H30 M30 24 V10 M30 24 V38" stroke="#94A3B8" stroke-width="2.5" fill="none"></path>
         <path d="M30 10 H40 M30 24 H40 M30 38 H40" stroke="#94A3B8" stroke-width="2.5" fill="none"></path>
