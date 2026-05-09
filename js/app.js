@@ -460,7 +460,7 @@ function initVersionInfo() {
   const versionEl = document.getElementById('app-version');
   if (!versionEl || typeof fetch !== 'function') return;
 
-  fetch('./version.json', { cache: 'no-store' })
+  fetch(`./version.json?ts=${Date.now()}`, { cache: 'no-store' })
     .then(response => (response.ok ? response.json() : null))
     .then(metadata => {
       const version = typeof metadata?.version === 'string' ? metadata.version.trim() : '';
