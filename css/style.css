@@ -449,7 +449,7 @@ body {
 
 .app-footer {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 1fr auto;
   align-items: center;
   padding: 6px 16px;
   background: var(--color-surface);
@@ -460,12 +460,10 @@ body {
 }
 
 .app-footer__copyright {
-  grid-column: 2;
-  justify-self: center;
+  justify-self: start;
 }
 
 .app-footer__version {
-  grid-column: 3;
   justify-self: end;
   min-height: 1em;
   white-space: nowrap;
