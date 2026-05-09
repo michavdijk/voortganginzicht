@@ -129,16 +129,13 @@ function buildNodeElement(node) {
   const row = document.createElement('div');
   row.className = 'tree__node-row';
 
-  // Main line: dot + name + badge + actions
+  // Main line: status icon + name + badge + actions
   const mainLine = document.createElement('div');
   mainLine.className = 'tree__node-row-main';
 
-  // Incomplete indicator dot
+  // Incomplete indicator
   if (isActiviteit && node.omvang === null) {
-    const dot = document.createElement('span');
-    dot.className = 'tree__incomplete-dot';
-    dot.title = t('tree.tooltip.omvangNotSet');
-    mainLine.appendChild(dot);
+    mainLine.appendChild(buildIncompleteIcon());
   }
 
   // Name span (click to edit inline)
@@ -166,7 +163,6 @@ function buildNodeElement(node) {
     fieldsLine.className = 'tree__node-row-fields';
     fieldsLine.appendChild(buildOmvangInput(node));
     fieldsLine.appendChild(buildPercentageInput(node));
-    if (node.omvang === null) fieldsLine.appendChild(buildIncompleteHint());
     row.appendChild(fieldsLine);
   }
 
@@ -410,11 +406,37 @@ function buildFieldShell(labelText, node, fieldName) {
   return { wrapper, error };
 }
 
-function buildIncompleteHint() {
-  const hint = document.createElement('span');
-  hint.className = 'tree__incomplete-hint';
-  hint.textContent = t('tree.incomplete.omvangRequired');
-  return hint;
+function buildIncompleteIcon() {
+  const icon = document.createElement('span');
+  const label = t('tree.tooltip.omvangNotSet');
+  icon.className = 'tree__incomplete-icon';
+  icon.title = label;
+  icon.setAttribute('role', 'img');
+  icon.setAttribute('aria-label', label);
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', '14');
+  svg.setAttribute('height', '14');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', 'M12 3 22 20H2L12 3Z');
+
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line.setAttribute('x1', '12');
+  line.setAttribute('y1', '9');
+  line.setAttribute('x2', '12');
+  line.setAttribute('y2', '14');
+
+  const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  dot.setAttribute('cx', '12');
+  dot.setAttribute('cy', '17');
+  dot.setAttribute('r', '1');
+
+  svg.append(path, line, dot);
+  icon.appendChild(svg);
+  return icon;
 }
 
 function setFieldError(input, message) {
@@ -502,29 +524,18 @@ function syncActivityFieldChange(node) {
   const mainLine = row?.querySelector('.tree__node-row-main');
   if (!mainLine) return;
 
-  let dot = mainLine.querySelector('.tree__incomplete-dot');
-  if (isIncomplete && !dot) {
-    dot = document.createElement('span');
-    dot.className = 'tree__incomplete-dot';
-    dot.title = t('tree.tooltip.omvangNotSet');
-    mainLine.prepend(dot);
-  } else if (!isIncomplete && dot) {
-    dot.remove();
-  } else if (dot) {
-    dot.title = t('tree.tooltip.omvangNotSet');
+  let icon = mainLine.querySelector('.tree__incomplete-icon');
+  if (isIncomplete && !icon) {
+    icon = buildIncompleteIcon();
+    mainLine.prepend(icon);
+  } else if (!isIncomplete && icon) {
+    icon.remove();
+  } else if (icon) {
+    const label = t('tree.tooltip.omvangNotSet');
+    icon.title = label;
+    icon.setAttribute('aria-label', label);
   }
 
-  const fieldsLine = row?.querySelector('.tree__node-row-fields');
-  if (!fieldsLine) return;
-
-  let hint = fieldsLine.querySelector('.tree__incomplete-hint');
-  if (isIncomplete && !hint) {
-    fieldsLine.appendChild(buildIncompleteHint());
-  } else if (!isIncomplete && hint) {
-    hint.remove();
-  } else if (hint) {
-    hint.textContent = t('tree.incomplete.omvangRequired');
-  }
 }
 
 // ── Action buttons ───────────────────────────────────────────────────────────

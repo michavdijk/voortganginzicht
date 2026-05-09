@@ -274,6 +274,7 @@ function buildSizeIndicatorRow(indicator, index) {
     if (raw === '') {
       currentIndicator.omvang = null;
       clearFieldError(omvangInput);
+      if (labelInput.value.trim().length === 0) clearFieldError(labelInput);
       updateSizeIndicator(index, { omvang: null });
       return;
     }
@@ -286,6 +287,7 @@ function buildSizeIndicatorRow(indicator, index) {
     currentIndicator.omvang = Number(raw);
     clearFieldError(omvangInput);
     updateSizeIndicator(index, { omvang: currentIndicator.omvang });
+    validateSizeIndicatorLabelRequired(labelInput, currentIndicator);
   });
   omvangField.appendChild(omvangInput);
   omvangField.appendChild(omvangError);
@@ -308,8 +310,8 @@ function buildSizeIndicatorRow(indicator, index) {
     if (label.length === 0) {
       currentIndicator.label = '';
       labelInput.value = '';
-      clearFieldError(labelInput);
       updateSizeIndicator(index, { label: '' });
+      validateSizeIndicatorLabelRequired(labelInput, currentIndicator);
       return;
     }
     if (label.length > 80) {
@@ -341,6 +343,7 @@ function buildSizeIndicatorRow(indicator, index) {
   });
   row.appendChild(removeButton);
 
+  validateSizeIndicatorLabelRequired(labelInput, currentIndicator);
   return row;
 }
 
@@ -364,6 +367,19 @@ function buildIndicatorField(labelText, errorId) {
   error.hidden = true;
 
   return { field, error };
+}
+
+function validateSizeIndicatorLabelRequired(labelInput, indicator) {
+  const hasOmvang = indicator.omvang !== null && indicator.omvang !== undefined;
+  const hasLabel = labelInput.value.trim().length > 0;
+
+  if (hasOmvang && !hasLabel) {
+    setFieldError(labelInput, t('validation.sizeIndicator.labelRequired'));
+    return false;
+  }
+
+  clearFieldError(labelInput);
+  return true;
 }
 
 function setFieldError(input, message) {

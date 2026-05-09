@@ -968,18 +968,29 @@ ul.tree__children {
   padding-left: 4px;
 }
 
-.tree__node--incomplete > .tree__node-row .tree__node-row-main {
-  /* ensure main line aligns properly with the border offset */
+/* Incomplete warning indicator */
+.tree__incomplete-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--color-incomplete);
+  flex-shrink: 0;
 }
 
-/* Incomplete dot indicator */
-.tree__incomplete-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-incomplete);
-  flex-shrink: 0;
+.tree__incomplete-icon svg {
+  display: block;
+  fill: #fff7ed;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.tree__incomplete-icon circle {
+  fill: currentColor;
+  stroke: none;
 }
 
 /* Node name */
@@ -1072,14 +1083,6 @@ ul.tree__children {
 
 .tree__field-label--error .tree__number-input:focus {
   border-color: var(--color-danger);
-}
-
-.tree__incomplete-hint {
-  align-self: center;
-  color: var(--color-incomplete);
-  font-size: 0.75rem;
-  font-weight: 600;
-  white-space: nowrap;
 }
 
 /* Small number inputs */
