@@ -198,7 +198,7 @@ function startInlineEdit(nameSpan, node) {
   // Replace the span with the input
   nameSpan.replaceWith(input);
   input.focus();
-  input.select();
+  placeCursorAtEnd(input);
 
   let committed = false;
 
@@ -248,7 +248,6 @@ function buildOmvangInput(node) {
   input.className = 'tree__number-input';
   input.min = '1';
   input.step = '1';
-  input.placeholder = '–';
   input.title = t('tree.tooltip.omvang');
   if (node.omvang !== null) input.value = String(node.omvang);
 
@@ -293,7 +292,6 @@ function buildPercentageInput(node) {
   input.min = '0';
   input.max = '100';
   input.step = '1';
-  input.placeholder = '–';
   input.value = formatVoortgangInputValue(node);
   input.title = t('tree.tooltip.voortgang');
 
@@ -415,6 +413,11 @@ function focusTabTarget(target) {
   } else {
     setTimeout(focus, 0);
   }
+}
+
+function placeCursorAtEnd(input) {
+  const end = input.value.length;
+  input.setSelectionRange(end, end);
 }
 
 function syncActivityFieldChange(node) {

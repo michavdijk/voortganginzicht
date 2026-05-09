@@ -1046,10 +1046,10 @@ ul.tree__children {
   width: 60px;
   font-family: inherit;
   font-size: var(--font-size-sm);
-  text-align: right;
+  text-align: left;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  padding: 2px 6px;
+  padding: 3px 6px;
   background: var(--color-surface);
   color: var(--color-text);
   -moz-appearance: textfield; /* Firefox: hide spinner */
