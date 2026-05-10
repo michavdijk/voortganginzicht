@@ -104,6 +104,12 @@ body {
   line-height: 1.6;
 }
 
+.mobile-unsupported__continue {
+  min-height: 40px;
+  padding: 10px 18px;
+  font-size: 0.9375rem;
+}
+
 /* ============================================================
    Error Banner
    ============================================================ */

@@ -26,12 +26,23 @@ import { t } from './i18n.js';
 
 const PROJECT_NAME_MAX_LENGTH = 100;
 const PHONE_MAX_SHORT_SIDE = 600;
+let appInitialized = false;
+let appShell = null;
+let originalBodyClass = '';
 
 document.addEventListener('DOMContentLoaded', () => {
   if (isPhoneLikeViewport()) {
+    appShell = Array.from(document.body.childNodes);
+    originalBodyClass = document.body.className;
     renderPhoneUnsupportedMessage();
     return;
   }
+
+  initApplication();
+});
+
+function initApplication() {
+  if (appInitialized) return;
 
   const toolbarEl     = document.getElementById('toolbar');
   const treeEditorEl  = document.getElementById('tree-editor');
@@ -41,6 +52,8 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('[app] Required DOM elements not found (#toolbar, #tree-editor).');
     return;
   }
+
+  appInitialized = true;
 
   initToolbar(toolbarEl);
   initTreeEditor(treeEditorEl);
@@ -79,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('beforeunload', (e) => {
     if (isDirty()) e.preventDefault();
   });
-});
+}
 
 function isPhoneLikeViewport() {
   const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
@@ -116,8 +129,26 @@ function renderPhoneUnsupportedMessage() {
 
   message.append(nlMessage, enMessage);
 
-  main.append(logo, message);
+  const continueButton = document.createElement('button');
+  continueButton.type = 'button';
+  continueButton.className = 'btn btn--primary mobile-unsupported__continue';
+  continueButton.textContent = t('app.mobileUnsupported.continue');
+  continueButton.addEventListener('click', continueToApplication);
+
+  main.append(logo, message, continueButton);
   document.body.appendChild(main);
+}
+
+function continueToApplication() {
+  if (!appShell) return;
+
+  document.body.innerHTML = '';
+  document.body.className = originalBodyClass;
+  for (const node of appShell) {
+    document.body.appendChild(node);
+  }
+
+  initApplication();
 }
 
 // ── Auto-render ──────────────────────────────────────────────────────────────
