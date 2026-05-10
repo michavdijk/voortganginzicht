@@ -103,9 +103,18 @@ function renderPhoneUnsupportedMessage() {
   logo.height = 64;
   logo.alt = 'voortganginzicht.nl';
 
-  const message = document.createElement('p');
+  const message = document.createElement('div');
   message.className = 'mobile-unsupported__message';
-  message.textContent = t('app.mobileUnsupported');
+
+  const nlMessage = document.createElement('p');
+  nlMessage.lang = 'nl';
+  nlMessage.textContent = t('app.mobileUnsupported.nl');
+
+  const enMessage = document.createElement('p');
+  enMessage.lang = 'en';
+  enMessage.textContent = t('app.mobileUnsupported.en');
+
+  message.append(nlMessage, enMessage);
 
   main.append(logo, message);
   document.body.appendChild(main);
