@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pagina niet gevonden - voortganginzicht.nl</title>
+  <title>Pagina niet gevonden / Page not found - voortganginzicht.nl</title>
   <style>
     :root {
       --color-bg: #f8fafc;
@@ -31,25 +31,39 @@
     }
 
     main {
-      width: min(100%, 520px);
+      width: min(100%, 560px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       text-align: center;
     }
 
     .logo {
-      width: min(100%, 420px);
+      display: block;
+      width: min(100%, 340px);
       height: auto;
-      margin-bottom: 28px;
+      margin: 0 auto 32px;
     }
 
     h1 {
-      margin: 0 0 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin: 0 0 16px;
       font-size: clamp(1.75rem, 4vw, 2.4rem);
       line-height: 1.1;
       color: var(--color-text);
     }
 
+    .copy {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
     p {
-      margin: 0 0 24px;
+      margin: 0;
       color: var(--color-text-muted);
       font-size: 1rem;
       line-height: 1.5;
@@ -59,6 +73,8 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      flex-wrap: wrap;
+      gap: 6px;
       min-height: 38px;
       padding: 8px 14px;
       border: 1px solid var(--color-primary);
@@ -67,31 +83,28 @@
       background: var(--color-primary);
       font-size: 0.9375rem;
       font-weight: 600;
+      line-height: 1.25;
+      text-align: center;
       text-decoration: none;
     }
   </style>
 </head>
 <body>
   <main>
-    <svg class="logo" width="520" height="64" viewBox="0 0 520 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="voortganginzicht.nl">
-      <g transform="translate(12 18) scale(0.85)">
-        <path d="M8 24 H30 M30 24 V10 M30 24 V38" stroke="#94A3B8" stroke-width="2.5" fill="none"></path>
-        <path d="M30 10 H40 M30 24 H40 M30 38 H40" stroke="#94A3B8" stroke-width="2.5" fill="none"></path>
-        <rect x="40" y="4" width="50" height="12" rx="3" fill="#E2E8F0"></rect>
-        <rect x="40" y="18" width="65" height="12" rx="3" fill="#E2E8F0"></rect>
-        <rect x="40" y="32" width="45" height="12" rx="3" fill="#E2E8F0"></rect>
-        <rect x="40" y="4" width="36" height="12" rx="3" fill="#2563EB"></rect>
-        <rect x="40" y="18" width="48" height="12" rx="3" fill="#3B82F6"></rect>
-        <rect x="40" y="32" width="20" height="12" rx="3" fill="#60A5FA"></rect>
-        <rect x="0" y="18" width="12" height="12" rx="3" fill="#2563EB"></rect>
-      </g>
-      <text x="110" y="50" font-family="Inter, Arial, sans-serif" font-size="36" font-weight="600">
-        <tspan fill="#1E3A8A">voortgang</tspan><tspan fill="#2563EB">inzicht</tspan><tspan fill="#1E3A8A" font-size="22">.nl</tspan>
-      </text>
-    </svg>
-    <h1>Pagina niet gevonden</h1>
-    <p>De pagina die u zoekt bestaat niet of is verplaatst.</p>
-    <a href="./">Terug naar voortganginzicht.nl</a>
+    <img class="logo" src="/assets/logo.svg" width="520" height="64" alt="voortganginzicht.nl" />
+    <h1>
+      <span lang="nl">Pagina niet gevonden</span>
+      <span lang="en">Page not found</span>
+    </h1>
+    <div class="copy">
+      <p lang="nl">De pagina die u zoekt bestaat niet of is verplaatst.</p>
+      <p lang="en">The page you are looking for does not exist or has moved.</p>
+    </div>
+    <a href="/" aria-label="Terug naar voortganginzicht.nl / Back to voortganginzicht.nl">
+      <span lang="nl">Terug naar voortganginzicht.nl</span>
+      <span aria-hidden="true">/</span>
+      <span lang="en">Back to voortganginzicht.nl</span>
+    </a>
   </main>
 </body>
 </html>
