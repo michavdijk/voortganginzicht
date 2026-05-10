@@ -25,8 +25,14 @@ import { getType } from './model/tree.js';
 import { t } from './i18n.js';
 
 const PROJECT_NAME_MAX_LENGTH = 100;
+const PHONE_MAX_SHORT_SIDE = 600;
 
 document.addEventListener('DOMContentLoaded', () => {
+  if (isPhoneLikeViewport()) {
+    renderPhoneUnsupportedMessage();
+    return;
+  }
+
   const toolbarEl     = document.getElementById('toolbar');
   const treeEditorEl  = document.getElementById('tree-editor');
   const langEl        = document.getElementById('lang-switcher');
@@ -74,6 +80,36 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isDirty()) e.preventDefault();
   });
 });
+
+function isPhoneLikeViewport() {
+  const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+  const shortSide = Math.min(window.innerWidth, window.innerHeight);
+  return coarsePointer && shortSide < PHONE_MAX_SHORT_SIDE;
+}
+
+function renderPhoneUnsupportedMessage() {
+  document.documentElement.lang = t('app.doc.lang');
+  document.body.innerHTML = '';
+  document.body.className = 'mobile-unsupported-page';
+
+  const main = document.createElement('main');
+  main.className = 'mobile-unsupported';
+  main.setAttribute('role', 'main');
+
+  const logo = document.createElement('img');
+  logo.className = 'mobile-unsupported__logo';
+  logo.src = 'assets/logo.svg';
+  logo.width = 520;
+  logo.height = 64;
+  logo.alt = 'voortganginzicht.nl';
+
+  const message = document.createElement('p');
+  message.className = 'mobile-unsupported__message';
+  message.textContent = t('app.mobileUnsupported');
+
+  main.append(logo, message);
+  document.body.appendChild(main);
+}
 
 // ── Auto-render ──────────────────────────────────────────────────────────────
 

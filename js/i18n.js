@@ -16,6 +16,7 @@ const SUPPORTED = ['nl', 'en'];
 const translations = {
   nl: {
     'app.doc.lang':                     'nl',
+    'app.mobileUnsupported':            'Deze tool is niet geschikt voor gebruik op een mobiele telefoon. Open deze pagina op een desktop of laptop voor de beste ervaring.',
 
     'panel.tree.ariaLabel':             'Boomstructuur',
     'panel.tree.header':                'Werkstructuur',
@@ -157,6 +158,7 @@ const translations = {
   },
   en: {
     'app.doc.lang':                     'en',
+    'app.mobileUnsupported':            'This tool is not suitable for use on a mobile phone. Open this page on a desktop or laptop for the best experience.',
 
     'panel.tree.ariaLabel':             'Tree structure',
     'panel.tree.header':                'Work structure',
