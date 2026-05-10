@@ -132,7 +132,7 @@ function renderPhoneUnsupportedMessage() {
   const continueButton = document.createElement('button');
   continueButton.type = 'button';
   continueButton.className = 'btn btn--primary mobile-unsupported__continue';
-  continueButton.textContent = t('app.mobileUnsupported.continue');
+  continueButton.textContent = `${t('app.mobileUnsupported.continue.nl')} / ${t('app.mobileUnsupported.continue.en')}`;
   continueButton.addEventListener('click', continueToApplication);
 
   main.append(logo, message, continueButton);

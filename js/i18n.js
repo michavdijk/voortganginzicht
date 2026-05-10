@@ -19,7 +19,8 @@ const translations = {
     'app.mobileUnsupported.nl':         'Deze tool is niet geschikt voor gebruik op een mobiele telefoon. Open deze pagina op een desktop of laptop voor de beste ervaring.',
     'app.mobileUnsupported':            'Deze tool is niet geschikt voor gebruik op een mobiele telefoon. Open deze pagina op een desktop of laptop voor de beste ervaring.',
     'app.mobileUnsupported.en':         'This tool is not suitable for use on a mobile phone. Open this page on a desktop or laptop for the best experience.',
-    'app.mobileUnsupported.continue':   'Toch doorgaan naar de tool',
+    'app.mobileUnsupported.continue.nl': 'Toch doorgaan naar de tool',
+    'app.mobileUnsupported.continue.en': 'Continue to the tool anyway',
 
     'panel.tree.ariaLabel':             'Boomstructuur',
     'panel.tree.header':                'Werkstructuur',
@@ -164,7 +165,8 @@ const translations = {
     'app.mobileUnsupported.nl':         'Deze tool is niet geschikt voor gebruik op een mobiele telefoon. Open deze pagina op een desktop of laptop voor de beste ervaring.',
     'app.mobileUnsupported':            'This tool is not suitable for use on a mobile phone. Open this page on a desktop or laptop for the best experience.',
     'app.mobileUnsupported.en':         'This tool is not suitable for use on a mobile phone. Open this page on a desktop or laptop for the best experience.',
-    'app.mobileUnsupported.continue':   'Continue to the tool anyway',
+    'app.mobileUnsupported.continue.nl': 'Toch doorgaan naar de tool',
+    'app.mobileUnsupported.continue.en': 'Continue to the tool anyway',
 
     'panel.tree.ariaLabel':             'Tree structure',
     'panel.tree.header':                'Work structure',
