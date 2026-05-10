@@ -4,15 +4,17 @@ jobs:
   web-deploy:
     name: 🎉 Deploy on mijn.host
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
     - name: 🚚 Get latest code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v6
 
     - name: Generate version metadata
       run: bash scripts/generate-version.sh
     
     - name: 📂 Sync files
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.6
       with:
         server: voortganginzicht.nl
         username: ${{ secrets.FTPUSERNAME }}
