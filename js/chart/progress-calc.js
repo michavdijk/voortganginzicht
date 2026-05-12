@@ -72,3 +72,14 @@ export function getAllActiviteiten(node) {
   }
   return result;
 }
+
+/**
+ * Check if any Activiteit in the subtree has actual spending set.
+ *
+ * @param {import('../model/tree.js').Knoop} node
+ * @returns {boolean}
+ */
+export function hasActualSpending(node) {
+  const activiteiten = getAllActiviteiten(node);
+  return activiteiten.some(a => Number.isFinite(a.actueleBesteding) && a.actueleBesteding > 0);
+}

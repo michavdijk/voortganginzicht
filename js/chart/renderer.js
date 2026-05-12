@@ -19,7 +19,9 @@ import {
   LINE_HEIGHT,
   FONT_SIZE,
   FONT_FAMILY,
+  SIZE_GUIDE_HEIGHT,
 } from './layout.js';
+import { hasActualSpending } from './progress-calc.js';
 import { getColorPalette, normalizeSizeIndicators } from '../model/settings.js';
 import { t } from '../i18n.js';
 
@@ -74,7 +76,7 @@ export function renderChart(container, root, settings = { showPercentage: true, 
   const activeSizeIndicators = settings.showSizeIndicators
     ? normalizeSizeIndicators(settings.sizeIndicators)
     : [];
-  const { boxes, connectors, sizeGuide, sizeIndicators, totalWidth, totalHeight } = computeLayout(
+  const { boxes, connectors, sizeGuide, sizeIndicators, totalWidth, totalHeight, chartBottom } = computeLayout(
     root,
     containerWidth,
     {
@@ -109,6 +111,31 @@ export function renderChart(container, root, settings = { showPercentage: true, 
   if (sizeGuide) {
     svg.appendChild(buildSizeGuide(sizeGuide));
   }
+
+  // Add actual spending legend if needed
+  const legendWidth = 168;
+  const legendHeight = 92;
+  let extendedTotalHeight = totalHeight;
+
+  if (settings.showActualSpending && hasActualSpending(root)) {
+    const contentRight = boxes.length > 0 ? Math.max(...boxes.map(b => b.x + b.width)) : totalWidth - 16;
+    const legendX = Math.max(contentRight - legendWidth, 16);
+    const legendY = sizeIndicators.length > 0
+      ? chartBottom + 16
+      : sizeGuide
+        ? sizeGuide.y + SIZE_GUIDE_HEIGHT + 8
+        : totalHeight - legendHeight - 16;
+
+    const legendBottom = legendY + legendHeight + 16;
+    if (legendBottom > extendedTotalHeight) {
+      extendedTotalHeight = legendBottom;
+    }
+
+    svg.appendChild(buildActualSpendingLegend(legendX, legendY, legendWidth, legendHeight, palette));
+  }
+
+  svg.setAttribute('viewBox', `0 0 ${totalWidth} ${extendedTotalHeight}`);
+  svg.setAttribute('height', String(extendedTotalHeight));
 
   container._chartSvg = svg;
   container.innerHTML = '';
@@ -374,6 +401,114 @@ function buildActualSpendingMarker({ actualSpending, omvang, trackX, trackY, tra
 
   return marker;
 }
+
+// ── Actual spending legend builder ───────────────────────────────────────────
+
+function buildActualSpendingLegend(x, y, width, height, palette) {
+  const g = createEl('g');
+  g.setAttribute('data-actual-spending-legend', 'true');
+
+  const background = createEl('rect');
+  setAttrs(background, {
+    x,
+    y,
+    width,
+    height,
+    rx: 10,
+    ry: 10,
+    fill: COLOR_WHITE,
+    stroke: '#CBD5E1',
+    'stroke-width': 1,
+  });
+  g.appendChild(background);
+
+  const title = createEl('text');
+  setAttrs(title, {
+    x: x + 12,
+    y: y + 16,
+    fill: COLOR_TEXT_DARK,
+    'font-size': 11,
+    'font-family': FONT_FAMILY,
+    'font-weight': 700,
+  });
+  title.textContent = t('chart.legend.title').toUpperCase();
+  g.appendChild(title);
+
+  const leftColumnX = x + 12;
+  const rightColumnX = x + 56;
+  const row1Y = y + 34;
+  const row2Y = y + 58;
+
+  const progressLabel = createEl('text');
+  setAttrs(progressLabel, {
+    x: rightColumnX,
+    y: row1Y,
+    fill: COLOR_TEXT_DARK,
+    'font-size': 12,
+    'font-family': FONT_FAMILY,
+    'font-weight': 400,
+    'dominant-baseline': 'middle',
+  });
+  progressLabel.textContent = t('chart.legend.progress');
+  g.appendChild(progressLabel);
+
+  const barX = leftColumnX;
+  const barY = row1Y - 5;
+  const barWidth = 36;
+  const trackHeight = PROGRESS_TRACK_HEIGHT;
+  const fillWidth = Math.max(0, barWidth * 0.5);
+
+  const track = createEl('rect');
+  setAttrs(track, {
+    x: barX,
+    y: barY,
+    width: barWidth,
+    height: trackHeight,
+    rx: trackHeight / 2,
+    fill: palette.bg,
+  });
+  g.appendChild(track);
+
+  const fill = createEl('rect');
+  setAttrs(fill, {
+    x: barX,
+    y: barY,
+    width: fillWidth,
+    height: trackHeight,
+    rx: trackHeight / 2,
+    fill: palette.fill,
+  });
+  g.appendChild(fill);
+
+  const markerX = leftColumnX + barWidth / 2;
+  const markerTipY = row2Y + 6;
+  const markerTopY = row2Y - 8;
+  const marker = createEl('path');
+  setAttrs(marker, {
+    d: `M ${markerX} ${markerTipY} L ${markerX - ACTUAL_SPENDING_MARKER_HALF_WIDTH} ${markerTopY} L ${markerX + ACTUAL_SPENDING_MARKER_HALF_WIDTH} ${markerTopY} Z`,
+    fill: COLOR_ACTUAL_SPENDING,
+    stroke: COLOR_WHITE,
+    'stroke-width': 1.5,
+    'stroke-linejoin': 'round',
+  });
+  g.appendChild(marker);
+
+  const label = createEl('text');
+  setAttrs(label, {
+    x: rightColumnX,
+    y: row2Y,
+    fill: COLOR_TEXT_DARK,
+    'font-size': 12,
+    'font-family': FONT_FAMILY,
+    'font-weight': 400,
+    'dominant-baseline': 'middle',
+  });
+  label.textContent = t('chart.actualSpending.legend');
+  g.appendChild(label);
+
+  return g;
+}
+
 // ── Connector builder ─────────────────────────────────────────────────────────
 
 function buildConnector(conn) {

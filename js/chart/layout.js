@@ -9,7 +9,7 @@
  *   – Progress bar   (fixed PROGRESS_BAR_HEIGHT)
  */
 
-import { calcWeightedProgress, getAllActiviteiten } from './progress-calc.js';
+import { calcWeightedProgress, getAllActiviteiten, hasActualSpending } from './progress-calc.js';
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 
@@ -212,7 +212,15 @@ export function computeLayout(root, containerWidth, options = {}) {
   const contentBottom = Math.max(maxBottom, indicatorBottom);
   const totalHeight = contentBottom + (sizeGuide ? SIZE_GUIDE_GAP + SIZE_GUIDE_HEIGHT : 0) + CHART_PADDING;
 
-  return { boxes, connectors, sizeGuide, sizeIndicators: renderedSizeIndicators, totalWidth, totalHeight };
+  return {
+    boxes,
+    connectors,
+    sizeGuide,
+    sizeIndicators: renderedSizeIndicators,
+    totalWidth,
+    totalHeight,
+    chartBottom: maxBottom,
+  };
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────

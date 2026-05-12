@@ -38,6 +38,9 @@ const translations = {
     'chart.sizeGuide':                  'relatieve omvang',
     'chart.actualSpending.markerTitle': 'Actuele besteding: {value}',
     'chart.actualSpending.overrunTitle': 'Actuele besteding: {value}; omvang: {size}; overschrijding: +{overrun}% ({percentage}% van de omvang).',
+    'chart.actualSpending.legend':       'Actuele besteding',
+    'chart.legend.title':                'Legenda',
+    'chart.legend.progress':             'Voortgang',
 
     'project.prompt.name':              'Projectnaam:',
     'project.untitled':                 'Naamloos project',
@@ -216,6 +219,9 @@ const translations = {
     'chart.sizeGuide':                  'relative size',
     'chart.actualSpending.markerTitle': 'Actual spending: {value}',
     'chart.actualSpending.overrunTitle': 'Actual spending: {value}; size: {size}; overrun: +{overrun}% ({percentage}% of size).',
+    'chart.actualSpending.legend':       'Actual spending',
+    'chart.legend.title':                'Legend',
+    'chart.legend.progress':             'Progress',
 
     'project.prompt.name':              'Project name:',
     'project.untitled':                 'Untitled project',
