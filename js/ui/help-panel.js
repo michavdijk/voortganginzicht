@@ -16,6 +16,58 @@ const HELP_SECTIONS = [
   'files',
 ];
 
+const HELP_CONTENT = {
+  workStructure: [
+    { type: 'paragraph', key: 'intro' },
+    { type: 'list', keys: ['structure.goal', 'structure.subgoals', 'structure.activities'] },
+    { type: 'paragraph', key: 'activityFields' },
+    { type: 'paragraph', key: 'useIntro' },
+    { type: 'list', keys: ['use.add', 'use.level', 'use.order'] },
+    { type: 'heading', key: 'size.heading' },
+    { type: 'paragraph', key: 'size.intro' },
+    { type: 'list', keys: ['size.small', 'size.medium', 'size.large'] },
+    { type: 'heading', key: 'progress.heading' },
+    { type: 'paragraph', key: 'progress.body' },
+    { type: 'heading', key: 'actualSpending.heading' },
+    { type: 'paragraph', key: 'actualSpending.body' },
+    { type: 'paragraph', key: 'actualSpending.setting' },
+    { type: 'paragraph', key: 'rollup' },
+  ],
+  chart: [
+    { type: 'paragraph', key: 'intro' },
+    { type: 'list', keys: ['item.size', 'item.fill', 'item.rollup'] },
+    { type: 'paragraph', key: 'actualSpending' },
+    { type: 'paragraph', key: 'settings' },
+    { type: 'paragraph', key: 'download' },
+  ],
+  settings: [
+    { type: 'paragraph', key: 'intro' },
+    { type: 'heading', key: 'percentage.heading' },
+    { type: 'paragraph', key: 'percentage.body' },
+    { type: 'heading', key: 'color.heading' },
+    { type: 'paragraph', key: 'color.body' },
+    { type: 'heading', key: 'sizeIndicators.heading' },
+    { type: 'paragraph', key: 'sizeIndicators.body' },
+    { type: 'paragraph', key: 'sizeIndicators.examplesIntro' },
+    { type: 'list', keys: ['sizeIndicators.small', 'sizeIndicators.medium', 'sizeIndicators.large'] },
+    { type: 'paragraph', key: 'sizeIndicators.position' },
+    { type: 'heading', key: 'actualSpending.heading' },
+    { type: 'paragraph', key: 'actualSpending.body' },
+    { type: 'paragraph', key: 'actualSpending.report' },
+    { type: 'paragraph', key: 'actualSpending.useCase' },
+  ],
+  files: [
+    { type: 'paragraph', key: 'intro' },
+    { type: 'heading', key: 'save.heading' },
+    { type: 'paragraph', key: 'save.body' },
+    { type: 'heading', key: 'open.heading' },
+    { type: 'paragraph', key: 'open.body' },
+    { type: 'heading', key: 'download.heading' },
+    { type: 'paragraph', key: 'download.body' },
+    { type: 'paragraph', key: 'privacy' },
+  ],
+};
+
 let overlay = null;
 let dialogTitle = null;
 let closeButton = null;
@@ -181,40 +233,40 @@ function renderSection() {
   heading.textContent = t(`help.${activeSection}.title`);
   contentEl.appendChild(heading);
 
-  const intro = document.createElement('p');
-  intro.className = 'help-dialog__intro';
-  intro.textContent = t(`help.${activeSection}.intro`);
-  contentEl.appendChild(intro);
-
-  const list = document.createElement('ul');
-  list.className = 'help-dialog__list';
-  for (let i = 1; i <= 8; i++) {
-    const itemKey = `help.${activeSection}.item${i}`;
-    const text = t(itemKey);
-    if (text === itemKey) continue;
-    const item = document.createElement('li');
-    item.appendChild(document.createTextNode(text));
-    const subList = buildSubList(itemKey);
-    if (subList) item.appendChild(subList);
-    list.appendChild(item);
+  const blocks = HELP_CONTENT[activeSection] || [];
+  for (const block of blocks) {
+    const element = buildHelpBlock(activeSection, block);
+    if (element) contentEl.appendChild(element);
   }
-  contentEl.appendChild(list);
 }
 
-function buildSubList(itemKey) {
-  const subList = document.createElement('ul');
-  subList.className = 'help-dialog__sublist';
-
-  for (let i = 1; i <= 6; i++) {
-    const subKey = `${itemKey}.sub${i}`;
-    const text = t(subKey);
-    if (text === subKey) continue;
-    const item = document.createElement('li');
-    item.textContent = text;
-    subList.appendChild(item);
+function buildHelpBlock(section, block) {
+  if (block.type === 'heading') {
+    const heading = document.createElement('h4');
+    heading.className = 'help-dialog__subheading';
+    heading.textContent = t(`help.${section}.${block.key}`);
+    return heading;
   }
 
-  return subList.children.length > 0 ? subList : null;
+  if (block.type === 'paragraph') {
+    const paragraph = document.createElement('p');
+    paragraph.className = 'help-dialog__paragraph';
+    paragraph.textContent = t(`help.${section}.${block.key}`);
+    return paragraph;
+  }
+
+  if (block.type === 'list') {
+    const list = document.createElement('ul');
+    list.className = 'help-dialog__list';
+    for (const key of block.keys) {
+      const item = document.createElement('li');
+      item.textContent = t(`help.${section}.${key}`);
+      list.appendChild(item);
+    }
+    return list;
+  }
+
+  return null;
 }
 
 function normalizeSection(section) {

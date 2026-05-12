@@ -6,7 +6,8 @@
  *
  * Each box is split into two vertical sections:
  *   – Title section  : wrapped node name
- *   – Progress section with compact progress bar and optional percentage
+ *   – Progress section with compact progress bar, optional percentage and
+ *     optional actual-spending marker
  */
 
 import {
@@ -29,10 +30,19 @@ const COLOR_TEXT_DARK  = '#1E3A5F';
 const COLOR_CONNECTOR  = '#94A3B8';
 const COLOR_GUIDE      = '#475569';
 const COLOR_SIZE_INDICATOR = '#334155';
+const COLOR_ACTUAL_SPENDING = '#0F172A';
+const COLOR_ACTUAL_SPENDING_OVERRUN = '#DC2626';
 const COLOR_WHITE      = '#FFFFFF';
 const PROGRESS_TRACK_HEIGHT = 6;
 const PROGRESS_LABEL_WIDTH  = 30;
 const PROGRESS_LABEL_GAP    = 8;
+const ACTUAL_SPENDING_MARKER_HALF_WIDTH = 5;
+const ACTUAL_SPENDING_OVERRUN_LABEL_MIN_WIDTH = 42;
+const ACTUAL_SPENDING_OVERRUN_LABEL_GAP = 2;
+const ACTUAL_SPENDING_OVERRUN_LABEL_HEIGHT = 12;
+const ACTUAL_SPENDING_OVERRUN_LABEL_H_PADDING = 4;
+const ACTUAL_SPENDING_OVERRUN_LABEL_LEFT_PADDING = 8;
+const ACTUAL_SPENDING_OVERRUN_LABEL_CHAR_WIDTH = 6.2;
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -43,7 +53,7 @@ const PROGRESS_LABEL_GAP    = 8;
  *
  * @param {HTMLElement} container
  * @param {import('../model/tree.js').Knoop} root
- * @param {{ showPercentage: boolean, colorScheme: string, customColor?: string, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }> }} settings
+ * @param {{ showPercentage: boolean, colorScheme: string, customColor?: string, showActualSpending?: boolean, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }> }} settings
  */
 export function renderChart(container, root, settings = { showPercentage: true, colorScheme: 'blauw' }) {
   // Measure available width via a cascade of fallbacks.
@@ -94,7 +104,7 @@ export function renderChart(container, root, settings = { showPercentage: true, 
     svg.appendChild(buildConnector(conn));
   }
   for (const box of boxes) {
-    svg.appendChild(buildBox(box, palette, settings.showPercentage));
+    svg.appendChild(buildBox(box, palette, settings.showPercentage, Boolean(settings.showActualSpending)));
   }
   if (sizeGuide) {
     svg.appendChild(buildSizeGuide(sizeGuide));
@@ -130,9 +140,10 @@ export function getRenderSvg(container) {
  * @param {import('./layout.js').BoxDescriptor} box
  * @param {{ fill: string, bg: string, border: string, text?: string }} palette
  * @param {boolean} showPercentage
+ * @param {boolean} showActualSpending
  * @returns {SVGGElement}
  */
-function buildBox(box, palette, showPercentage) {
+function buildBox(box, palette, showPercentage, showActualSpending) {
   const { x, y, width, height, progress, node } = box;
   const g           = createEl('g');
   const titleHeight = height - PROGRESS_BAR_HEIGHT;
@@ -160,7 +171,17 @@ function buildBox(box, palette, showPercentage) {
   const barBg = createEl('rect');
   setAttrs(barBg, { x, y: barY, width, height: PROGRESS_BAR_HEIGHT, fill: COLOR_WHITE, 'clip-path': `url(#${clipId})` });
   g.appendChild(barBg);
-  buildProgressBar(g, { x, y: barY, width, progress, palette, showPercentage, clipId });
+  buildProgressBar(g, {
+    x,
+    y: barY,
+    width,
+    progress,
+    palette,
+    showPercentage,
+    clipId,
+    actualSpending: showActualSpending && !isBranch ? node.actueleBesteding : null,
+    omvang: !isBranch ? node.omvang : null,
+  });
 
   // ── Divider line ──────────────────────────────────────────────────────────
   const divider = createEl('line');
@@ -205,7 +226,7 @@ function buildBox(box, palette, showPercentage) {
   return g;
 }
 
-function buildProgressBar(g, { x, y, width, progress, palette, showPercentage, clipId }) {
+function buildProgressBar(g, { x, y, width, progress, palette, showPercentage, clipId, actualSpending, omvang }) {
   const pctReserve = showPercentage ? PROGRESS_LABEL_WIDTH + PROGRESS_LABEL_GAP : 0;
   const trackX     = x + TEXT_H_PADDING;
   const trackY     = y + (PROGRESS_BAR_HEIGHT - PROGRESS_TRACK_HEIGHT) / 2;
@@ -238,6 +259,16 @@ function buildProgressBar(g, { x, y, width, progress, palette, showPercentage, c
       });
       g.appendChild(fill);
     }
+
+    const marker = buildActualSpendingMarker({
+      actualSpending,
+      omvang,
+      trackX,
+      trackY,
+      trackWidth,
+      clipId,
+    });
+    if (marker) g.appendChild(marker);
   }
 
   if (!showPercentage) return;
@@ -256,6 +287,92 @@ function buildProgressBar(g, { x, y, width, progress, palette, showPercentage, c
   });
   pctText.textContent = `${Math.round(progress)}%`;
   g.appendChild(pctText);
+}
+
+function buildActualSpendingMarker({ actualSpending, omvang, trackX, trackY, trackWidth, clipId }) {
+  if (
+    !Number.isFinite(actualSpending) ||
+    !Number.isFinite(omvang) ||
+    actualSpending < 1 ||
+    omvang < 1 ||
+    trackWidth <= 0
+  ) {
+    return null;
+  }
+
+  const isOverrun = actualSpending > omvang;
+  const clamped = Math.min(actualSpending, omvang);
+  const percentage = Math.round((actualSpending / omvang) * 100);
+  const overrunPercentage = Math.round(((actualSpending - omvang) / omvang) * 100);
+  const markerX = trackX + (clamped / omvang) * trackWidth;
+  const tipY = trackY + PROGRESS_TRACK_HEIGHT + 2;
+  const topY = trackY - 5;
+  const markerHalfWidth = ACTUAL_SPENDING_MARKER_HALF_WIDTH;
+  const markerColor = isOverrun ? COLOR_ACTUAL_SPENDING_OVERRUN : COLOR_ACTUAL_SPENDING;
+
+  const marker = createEl('g');
+  marker.setAttribute('clip-path', `url(#${clipId})`);
+  marker.setAttribute('data-actual-spending-marker', 'true');
+  marker.setAttribute('data-actual-spending-value', String(actualSpending));
+  marker.setAttribute('data-actual-spending-clamped', String(actualSpending > omvang));
+  marker.setAttribute('data-actual-spending-overrun', String(isOverrun));
+  marker.setAttribute('data-actual-spending-percentage', String(percentage));
+  marker.setAttribute('data-actual-spending-overrun-percentage', String(isOverrun ? overrunPercentage : 0));
+
+  const title = createEl('title');
+  title.textContent = isOverrun
+    ? t('chart.actualSpending.overrunTitle', { value: actualSpending, size: omvang, percentage, overrun: overrunPercentage })
+    : t('chart.actualSpending.markerTitle', { value: actualSpending });
+  marker.appendChild(title);
+
+  const triangle = createEl('path');
+  setAttrs(triangle, {
+    d: `M ${markerX} ${tipY} L ${markerX - markerHalfWidth} ${topY} L ${markerX + markerHalfWidth} ${topY} Z`,
+    fill: markerColor,
+    stroke: COLOR_WHITE,
+    'stroke-width': 1.5,
+    'stroke-linejoin': 'round',
+  });
+  marker.appendChild(triangle);
+
+  if (isOverrun && trackWidth >= ACTUAL_SPENDING_OVERRUN_LABEL_MIN_WIDTH) {
+    const labelText = `+${overrunPercentage}%`;
+    const labelWidth = Math.ceil(
+      labelText.length * ACTUAL_SPENDING_OVERRUN_LABEL_CHAR_WIDTH +
+      ACTUAL_SPENDING_OVERRUN_LABEL_LEFT_PADDING +
+      ACTUAL_SPENDING_OVERRUN_LABEL_H_PADDING
+    );
+    const labelRight = markerX;
+    const labelY = topY - ACTUAL_SPENDING_OVERRUN_LABEL_GAP - ACTUAL_SPENDING_OVERRUN_LABEL_HEIGHT;
+
+    const badge = createEl('rect');
+    setAttrs(badge, {
+      x: labelRight - labelWidth,
+      y: labelY,
+      width: labelWidth,
+      height: ACTUAL_SPENDING_OVERRUN_LABEL_HEIGHT,
+      rx: 2,
+      fill: COLOR_ACTUAL_SPENDING_OVERRUN,
+    });
+    marker.appendChild(badge);
+
+    const label = createEl('text');
+    setAttrs(label, {
+      x: labelRight - ACTUAL_SPENDING_OVERRUN_LABEL_H_PADDING,
+      y: labelY + ACTUAL_SPENDING_OVERRUN_LABEL_HEIGHT / 2,
+      'dominant-baseline': 'middle',
+      'text-anchor': 'end',
+      fill: COLOR_WHITE,
+      'font-size': 9,
+      'font-weight': 700,
+      'font-family': FONT_FAMILY,
+    });
+    label.setAttribute('data-actual-spending-overrun-label', 'true');
+    label.textContent = labelText;
+    marker.appendChild(label);
+  }
+
+  return marker;
 }
 // ── Connector builder ─────────────────────────────────────────────────────────
 

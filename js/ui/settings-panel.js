@@ -3,6 +3,7 @@
  *
  * Renders a compact settings section with chart options:
  * – "Percentage opnemen in output" checkbox
+ * – "Actuele besteding tonen" checkbox
  * – "Kleurenschema" dropdown
  * – optional size indicators
  *
@@ -64,6 +65,7 @@ function render() {
   percentageRow.appendChild(pctLabel);
   _container.appendChild(percentageRow);
 
+
   // ── Colour scheme dropdown ───────────────────────────────────────────────────
   const colorGroup = buildRow();
   colorGroup.classList.add('settings-panel__row--stacked');
@@ -103,6 +105,8 @@ function render() {
 
   _container.appendChild(colorGroup);
 
+
+
   // ── Size indicators ─────────────────────────────────────────────────────────
   const indicatorsRow = buildRow();
   indicatorsRow.classList.add('settings-panel__row--stacked');
@@ -133,6 +137,26 @@ function render() {
   }
 
   _container.appendChild(indicatorsRow);
+
+   // ── Actual spending toggle ─────────────────────────────────────────────────
+  const actualSpendingRow = buildRow();
+
+  const actualSpendingLabel = document.createElement('label');
+  actualSpendingLabel.className = 'settings-panel__label';
+  actualSpendingLabel.textContent = t('settings.actualSpending');
+
+  const actualSpendingCheckbox = document.createElement('input');
+  actualSpendingCheckbox.type = 'checkbox';
+  actualSpendingCheckbox.className = 'settings-panel__checkbox';
+  actualSpendingCheckbox.checked = settings.showActualSpending;
+  actualSpendingCheckbox.addEventListener('change', () => {
+    updateSettings({ showActualSpending: actualSpendingCheckbox.checked });
+    emit('settings-changed');
+  });
+
+  actualSpendingLabel.prepend(actualSpendingCheckbox);
+  actualSpendingRow.appendChild(actualSpendingLabel);
+  _container.appendChild(actualSpendingRow);
 }
 
 function buildRow() {

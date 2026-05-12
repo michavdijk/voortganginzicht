@@ -1,15 +1,15 @@
 /**
  * Application settings store.
  *
- * Holds chart generation options: colour scheme, percentage visibility and
- * optional size indicators.
+ * Holds chart generation options: colour scheme, percentage visibility,
+ * optional actual spending markers and optional size indicators.
  * Settings are in-memory only and reset to defaults on page reload.
  */
 
 /** @typedef {{ omvang: number, label: string }} SizeIndicator */
 /** @typedef {{ omvang: number | null, label: string }} EditableSizeIndicator */
 /** @typedef {{ fill: string, bg: string, border: string, text?: string }} ColorPalette */
-/** @typedef {{ showPercentage: boolean, colorScheme: string, customColor: string, showSizeIndicators: boolean, sizeIndicators: EditableSizeIndicator[] }} Settings */
+/** @typedef {{ showPercentage: boolean, colorScheme: string, customColor: string, showActualSpending: boolean, showSizeIndicators: boolean, sizeIndicators: EditableSizeIndicator[] }} Settings */
 
 export const CUSTOM_COLOR_SCHEME = 'aangepast';
 export const DEFAULT_CUSTOM_COLOR = '#2563EB';
@@ -39,6 +39,7 @@ const DEFAULT_SETTINGS = {
   showPercentage: true,
   colorScheme: DEFAULT_COLOR_SCHEME,
   customColor: DEFAULT_CUSTOM_COLOR,
+  showActualSpending: false,
   showSizeIndicators: false,
   sizeIndicators: [],
 };
@@ -74,6 +75,9 @@ export function updateSettings(patch) {
   }
   if ('customColor' in patch) {
     _settings.customColor = normalizeCustomColor(patch.customColor);
+  }
+  if ('showActualSpending' in patch) {
+    _settings.showActualSpending = Boolean(patch.showActualSpending);
   }
   if ('showSizeIndicators' in patch) {
     _settings.showSizeIndicators = Boolean(patch.showSizeIndicators);

@@ -8,6 +8,7 @@
  *       "showPercentage": boolean,
  *       "colorScheme": string,
  *       "customColor": string,
+ *       "showActualSpending": boolean,
  *       "showSizeIndicators": boolean,
  *       "sizeIndicators": [{ "omvang": number, "label": string }]
  *     },
@@ -22,8 +23,8 @@
  *   → loaded with default settings.
  *
  * SerializedKnoop:
- *   { id, naam, omvang, voortgangspercentage, kinderen }
- *   omvang and voortgangspercentage may be null when left empty.
+ *   { id, naam, omvang, actueleBesteding, voortgangspercentage, kinderen }
+ *   omvang, actueleBesteding and voortgangspercentage may be null when left empty.
  *   (parent is omitted — it is a runtime-only reference)
  */
 
@@ -43,6 +44,7 @@ const DEFAULT_SETTINGS = {
   showPercentage: true,
   colorScheme: 'blauw',
   customColor: DEFAULT_CUSTOM_COLOR,
+  showActualSpending: false,
   showSizeIndicators: false,
   sizeIndicators: [],
 };
@@ -53,7 +55,7 @@ const DEFAULT_SETTINGS = {
  * Convert the in-memory tree, settings and project name to a JSON string.
  *
  * @param {import('../model/tree.js').Knoop | null} root
- * @param {{ showPercentage: boolean, colorScheme: string, customColor?: string, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }> }} settings
+ * @param {{ showPercentage: boolean, colorScheme: string, customColor?: string, showActualSpending?: boolean, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }> }} settings
  * @param {string} [projectnaam]
  * @returns {string} JSON string
  */
@@ -65,6 +67,7 @@ export function serialize(root, settings, projectnaam = '') {
       showPercentage: settings.showPercentage,
       colorScheme: normalizeColorScheme(settings.colorScheme),
       customColor: normalizeCustomColor(settings.customColor),
+      showActualSpending: Boolean(settings.showActualSpending),
       showSizeIndicators: Boolean(settings.showSizeIndicators),
       sizeIndicators: normalizeSizeIndicators(settings.sizeIndicators),
     },
@@ -83,6 +86,7 @@ function serializeNode(node) {
     id: node.id,
     naam: node.naam,
     omvang: node.omvang,
+    actueleBesteding: node.actueleBesteding ?? null,
     voortgangspercentage: node.voortgangspercentage,
     kinderen: node.kinderen.map(serializeNode),
   };
@@ -146,7 +150,7 @@ export function deserialize(jsonString) {
  * Parse and sanitise the instellingen block from a v2 document.
  * Falls back to defaults for missing or invalid values.
  * @param {*} raw
- * @returns {{ showPercentage: boolean, colorScheme: string, customColor: string, showSizeIndicators: boolean, sizeIndicators: Array<{ omvang: number, label: string }> }}
+ * @returns {{ showPercentage: boolean, colorScheme: string, customColor: string, showActualSpending: boolean, showSizeIndicators: boolean, sizeIndicators: Array<{ omvang: number, label: string }> }}
  */
 function parseInstellingen(raw) {
   if (typeof raw !== 'object' || raw === null) return { ...DEFAULT_SETTINGS };
@@ -161,13 +165,17 @@ function parseInstellingen(raw) {
 
   const customColor = normalizeCustomColor(raw.customColor);
 
+  const showActualSpending = typeof raw.showActualSpending === 'boolean'
+    ? raw.showActualSpending
+    : DEFAULT_SETTINGS.showActualSpending;
+
   const showSizeIndicators = typeof raw.showSizeIndicators === 'boolean'
     ? raw.showSizeIndicators
     : DEFAULT_SETTINGS.showSizeIndicators;
 
   const sizeIndicators = normalizeSizeIndicators(raw.sizeIndicators);
 
-  return { showPercentage, colorScheme, customColor, showSizeIndicators, sizeIndicators };
+  return { showPercentage, colorScheme, customColor, showActualSpending, showSizeIndicators, sizeIndicators };
 }
 
 /**
@@ -206,6 +214,17 @@ function validateNode(raw, seenIds, path = 'doel') {
       raw.omvang < 1
     ) {
       return `Ongeldig knooppunt op "${path}": "omvang" moet een geheel getal >= 1 of null zijn.`;
+    }
+  }
+
+  // actueleBesteding — must be a non-negative integer or null/absent
+  if (raw.actueleBesteding !== null && raw.actueleBesteding !== undefined) {
+    if (
+      typeof raw.actueleBesteding !== 'number' ||
+      !Number.isInteger(raw.actueleBesteding) ||
+      raw.actueleBesteding < 0
+    ) {
+      return `Ongeldig knooppunt op "${path}": "actueleBesteding" moet een geheel getal >= 0 of null zijn.`;
     }
   }
 
@@ -248,6 +267,7 @@ function buildNode(raw, parent) {
   // Override the auto-generated id with the persisted one.
   node.id = raw.id;
   node.omvang = raw.omvang;
+  node.actueleBesteding = raw.actueleBesteding ?? null;
   node.voortgangspercentage = raw.voortgangspercentage;
   node.kinderen = raw.kinderen.map(child => buildNode(child, node));
   return node;

@@ -45,6 +45,29 @@ export function validateOmvang(value) {
 }
 
 /**
+ * Validate an actuele besteding value: must be an integer >= 0.
+ * Accepts numbers or numeric strings.
+ * @param {string | number} value
+ * @returns {{ valid: boolean, error: string | null }}
+ */
+export function validateActueleBesteding(value) {
+  if (typeof value === 'string' && value.trim() === '') {
+    return { valid: false, error: t('validation.actualSpending.mustBeInt') };
+  }
+  const num = Number(value);
+  if (!Number.isFinite(num)) {
+    return { valid: false, error: t('validation.actualSpending.mustBeInt') };
+  }
+  if (!Number.isInteger(num)) {
+    return { valid: false, error: t('validation.actualSpending.noDecimals') };
+  }
+  if (num < 0) {
+    return { valid: false, error: t('validation.actualSpending.min') };
+  }
+  return { valid: true, error: null };
+}
+
+/**
  * Validate a voortgangspercentage value: must be an integer in [0, 100].
  * Accepts numbers or numeric strings.
  * @param {string | number} value

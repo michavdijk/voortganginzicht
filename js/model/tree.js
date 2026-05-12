@@ -8,7 +8,7 @@
  */
 
 import { emit } from '../events.js';
-import { validateNaam, validateOmvang, validatePercentage } from './validation.js';
+import { validateNaam, validateOmvang, validateActueleBesteding, validatePercentage } from './validation.js';
 import { t } from '../i18n.js';
 
 export class Knoop {
@@ -18,12 +18,14 @@ export class Knoop {
     this.parent = parent;
     this.kinderen = [];
     this.omvang = null;
+    this.actueleBesteding = null;
     this.voortgangspercentage = null;
   }
 }
 
 function clearActivityOnlyData(node) {
   node.omvang = null;
+  node.actueleBesteding = null;
   node.voortgangspercentage = null;
 }
 
@@ -225,6 +227,25 @@ export function setOmvang(node, value) {
   }
   node.omvang = Number(value);
   emit('tree-changed', { action: 'setOmvang', node });
+}
+
+/**
+ * Set the actuele besteding of a node. Only valid on Activiteiten.
+ *
+ * @param {Knoop} node
+ * @param {string | number} value
+ * @throws {Error} if invalid or node is not an Activiteit
+ */
+export function setActueleBesteding(node, value) {
+  if (getType(node) !== 'Activiteit') {
+    throw new Error(t('validation.actualSpending.onlyActiviteit'));
+  }
+  const validation = validateActueleBesteding(value);
+  if (!validation.valid) {
+    throw new Error(validation.error);
+  }
+  node.actueleBesteding = Number(value);
+  emit('tree-changed', { action: 'setActueleBesteding', node });
 }
 
 /**

@@ -863,24 +863,35 @@ body.help-panel-open {
   font-size: 1.25rem;
   line-height: 1.25;
   color: var(--color-text);
-  margin-bottom: 10px;
+  margin-bottom: 14px;
 }
 
+.help-dialog__subheading {
+  margin-top: 18px;
+  margin-bottom: 8px;
+  color: var(--color-text);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.help-dialog__paragraph,
 .help-dialog__intro {
   color: var(--color-text);
   line-height: 1.55;
   max-width: 56ch;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .help-dialog__list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 7px;
   padding-left: 20px;
   color: var(--color-text);
   line-height: 1.5;
   max-width: 62ch;
+  margin: 0 0 14px;
 }
 
 .help-dialog__list li::marker {
@@ -991,9 +1002,10 @@ ul.tree__children {
   min-height: 28px;
 }
 
-/* Second line: omvang + percentage inputs */
+/* Second line: omvang + optional actual spending + percentage inputs */
 .tree__node-row-fields {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 8px;
   padding-left: 14px;

@@ -18,11 +18,13 @@ import {
   moveLevelUp,
   moveLevelDown,
   setOmvang,
+  setActueleBesteding,
   setVoortgang,
   Knoop,
 } from '../model/tree.js';
 import { validateNaam } from '../model/validation.js';
 import { getRoot, setRoot } from '../model/project.js';
+import { getSettings } from '../model/settings.js';
 import { showError, confirmDelete } from './dialogs.js';
 import { t } from '../i18n.js';
 
@@ -39,11 +41,12 @@ export function init(container) {
 
   on('tree-changed', handleTreeChanged);
   on('project-loaded', () => renderTree(_container, getRoot()));
+  on('settings-changed', () => renderTree(_container, getRoot()));
   on('language-changed', () => renderTree(_container, getRoot()));
 }
 
 function handleTreeChanged(event) {
-  if (event && ['setOmvang', 'clearOmvang', 'setVoortgang'].includes(event.action)) {
+  if (event && ['setOmvang', 'clearOmvang', 'setActueleBesteding', 'clearActueleBesteding', 'setVoortgang'].includes(event.action)) {
     syncActivityFieldChange(event.node);
     return;
   }
@@ -157,11 +160,14 @@ function buildNodeElement(node) {
 
   row.appendChild(mainLine);
 
-  // Second line: omvang + percentage inputs (Activiteiten only)
+  // Second line: omvang + optional actual spending + percentage inputs (Activiteiten only)
   if (isActiviteit) {
     const fieldsLine = document.createElement('div');
     fieldsLine.className = 'tree__node-row-fields';
     fieldsLine.appendChild(buildOmvangInput(node));
+    if (getSettings().showActualSpending) {
+      fieldsLine.appendChild(buildActueleBestedingInput(node));
+    }
     fieldsLine.appendChild(buildPercentageInput(node));
     row.appendChild(fieldsLine);
   }
@@ -280,6 +286,54 @@ function buildOmvangInput(node) {
   return wrapper;
 }
 
+function buildActueleBestedingInput(node) {
+  const { wrapper, error } = buildFieldShell(t('tree.field.actualSpending'), node, 'actual-spending');
+  wrapper.classList.add('tree__field-label--actual-spending');
+
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.className = 'tree__number-input';
+  input.min = '0';
+  input.step = '1';
+  input.title = t('tree.tooltip.actualSpending');
+  input.setAttribute('aria-describedby', error.id);
+  if (node.actueleBesteding !== null && node.actueleBesteding !== undefined) {
+    input.value = String(node.actueleBesteding);
+  }
+
+  let suppressNextChange = false;
+
+  input.addEventListener('input', () => clearFieldError(input));
+
+  input.addEventListener('keydown', (event) => {
+    if (!shouldHandleTabCommit(event) || !hasActueleBestedingInputChanged(input, node)) return;
+
+    event.preventDefault();
+    const nextFocusTarget = getTabTarget(input, event.shiftKey);
+    if (!commitActueleBestedingInput(input, node)) return;
+
+    if (nextFocusTarget) {
+      suppressNextChange = true;
+      focusTabTarget(nextFocusTarget);
+    } else {
+      input.blur();
+    }
+  });
+
+  input.addEventListener('change', () => {
+    if (suppressNextChange) {
+      suppressNextChange = false;
+      return;
+    }
+
+    commitActueleBestedingInput(input, node);
+  });
+
+  wrapper.appendChild(input);
+  wrapper.appendChild(error);
+  return wrapper;
+}
+
 function buildPercentageInput(node) {
   const { wrapper, error } = buildFieldShell(t('tree.field.voortgang'), node, 'voortgang');
 
@@ -358,6 +412,32 @@ function commitOmvangInput(input, node) {
   }
 }
 
+function commitActueleBestedingInput(input, node) {
+  if (input.validity.badInput) {
+    setFieldError(input, t('validation.actualSpending.mustBeInt'));
+    return false;
+  }
+
+  const raw = input.value.trim();
+
+  if (raw === '') {
+    node.actueleBesteding = null;
+    clearFieldError(input);
+    emit('tree-changed', { action: 'clearActueleBesteding', node });
+    return true;
+  }
+
+  try {
+    setActueleBesteding(node, raw);
+    input.value = formatActueleBestedingInputValue(node);
+    clearFieldError(input);
+    return true;
+  } catch (e) {
+    setFieldError(input, e.message);
+    return false;
+  }
+}
+
 function commitPercentageInput(input, node) {
   if (input.validity.badInput) {
     setFieldError(input, t('validation.percentage.mustBeInt'));
@@ -380,8 +460,18 @@ function hasOmvangInputChanged(input, node) {
   return input.validity.badInput || input.value.trim() !== currentValue;
 }
 
+function hasActueleBestedingInputChanged(input, node) {
+  return input.validity.badInput || input.value.trim() !== formatActueleBestedingInputValue(node);
+}
+
 function hasPercentageInputChanged(input, node) {
   return input.validity.badInput || input.value.trim() !== formatVoortgangInputValue(node);
+}
+
+function formatActueleBestedingInputValue(node) {
+  return node.actueleBesteding === null || node.actueleBesteding === undefined
+    ? ''
+    : String(node.actueleBesteding);
 }
 
 function formatVoortgangInputValue(node) {
