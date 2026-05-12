@@ -1182,6 +1182,14 @@ ul.tree__children {
   gap: 8px;
 }
 
+.settings-panel__divider {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+
+
 .settings-panel__row--stacked {
   align-items: stretch;
   flex-direction: column;

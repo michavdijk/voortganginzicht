@@ -45,26 +45,6 @@ function render() {
   _container.className = 'settings-panel';
   const settings = getSettings();
 
-  // ── Percentage toggle ────────────────────────────────────────────────────────
-  const percentageRow = buildRow();
-
-  const pctLabel = document.createElement('label');
-  pctLabel.className = 'settings-panel__label';
-  pctLabel.textContent = t('settings.percentage');
-
-  const pctCheckbox = document.createElement('input');
-  pctCheckbox.type = 'checkbox';
-  pctCheckbox.className = 'settings-panel__checkbox';
-  pctCheckbox.checked = settings.showPercentage;
-  pctCheckbox.addEventListener('change', () => {
-    updateSettings({ showPercentage: pctCheckbox.checked });
-    emit('settings-changed');
-  });
-
-  pctLabel.prepend(pctCheckbox);
-  percentageRow.appendChild(pctLabel);
-  _container.appendChild(percentageRow);
-
 
   // ── Colour scheme dropdown ───────────────────────────────────────────────────
   const colorGroup = buildRow();
@@ -105,7 +85,30 @@ function render() {
 
   _container.appendChild(colorGroup);
 
+  // - Divider  ────────────────────────────────────────────────────────
+  const divider = document.createElement('p');
+    divider.className = 'settings-panel__divider';
+  _container.appendChild(divider);
 
+  // ── Percentage toggle ────────────────────────────────────────────────────────
+  const percentageRow = buildRow();
+
+  const pctLabel = document.createElement('label');
+  pctLabel.className = 'settings-panel__label';
+  pctLabel.textContent = t('settings.percentage');
+
+  const pctCheckbox = document.createElement('input');
+  pctCheckbox.type = 'checkbox';
+  pctCheckbox.className = 'settings-panel__checkbox';
+  pctCheckbox.checked = settings.showPercentage;
+  pctCheckbox.addEventListener('change', () => {
+    updateSettings({ showPercentage: pctCheckbox.checked });
+    emit('settings-changed');
+  });
+
+  pctLabel.prepend(pctCheckbox);
+  percentageRow.appendChild(pctLabel);
+  _container.appendChild(percentageRow);
 
   // ── Size indicators ─────────────────────────────────────────────────────────
   const indicatorsRow = buildRow();

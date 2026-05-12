@@ -31,7 +31,6 @@ const HELP_CONTENT = {
     { type: 'heading', key: 'actualSpending.heading' },
     { type: 'paragraph', key: 'actualSpending.body' },
     { type: 'paragraph', key: 'actualSpending.setting' },
-    { type: 'paragraph', key: 'rollup' },
   ],
   chart: [
     { type: 'paragraph', key: 'intro' },
@@ -42,10 +41,10 @@ const HELP_CONTENT = {
   ],
   settings: [
     { type: 'paragraph', key: 'intro' },
-    { type: 'heading', key: 'percentage.heading' },
-    { type: 'paragraph', key: 'percentage.body' },
     { type: 'heading', key: 'color.heading' },
     { type: 'paragraph', key: 'color.body' },
+    { type: 'heading', key: 'percentage.heading' },
+    { type: 'paragraph', key: 'percentage.body' },
     { type: 'heading', key: 'sizeIndicators.heading' },
     { type: 'paragraph', key: 'sizeIndicators.body' },
     { type: 'paragraph', key: 'sizeIndicators.examplesIntro' },
