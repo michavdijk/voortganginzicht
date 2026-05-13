@@ -556,6 +556,34 @@ body {
   min-width: 0;
 }
 
+.chart-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.chart-zoom-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chart-zoom-button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+}
+
+.chart-zoom-button svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
 .panel__body {
   flex: 1;
   overflow-y: auto;

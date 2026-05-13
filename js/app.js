@@ -26,9 +26,11 @@ import { t } from './i18n.js';
 
 const PROJECT_NAME_MAX_LENGTH = 100;
 const PHONE_MAX_SHORT_SIDE = 600;
+const CHART_ZOOM_LEVELS = [0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5];
 let appInitialized = false;
 let appShell = null;
 let originalBodyClass = '';
+let _chartZoom = 1;
 
 document.addEventListener('DOMContentLoaded', () => {
   if (isPhoneLikeViewport()) {
@@ -65,6 +67,7 @@ function initApplication() {
 
   initTreePanelToggle();
   initSettingsDrawer();
+  initChartZoomControls();
   initProjectNameTitle();
   initVersionInfo();
   applyStaticTranslations();
@@ -181,12 +184,15 @@ function autoRender() {
 
   if (!root || !canRender(root)) {
     chartBody.innerHTML = buildChartPlaceholder(root);
+    chartBody._chartSvg = null;
     _lastRenderWidth = 0;
+    updateChartZoomControls();
     return;
   }
 
-  renderChart(chartBody, root, getSettings());
+  renderChart(chartBody, root, { ...getSettings(), chartZoom: _chartZoom });
   _lastRenderWidth = chartBody.clientWidth;
+  updateChartZoomControls();
   emit('chart-generated', root);
 }
 
@@ -220,6 +226,73 @@ function chartPlaceholderMessage(root) {
 function countActiviteitenWithoutOmvang(node) {
   if (getType(node) === 'Activiteit') return node.omvang === null ? 1 : 0;
   return node.kinderen.reduce((count, child) => count + countActiviteitenWithoutOmvang(child), 0);
+}
+
+// ── Chart zoom controls ─────────────────────────────────────────────────────
+
+function initChartZoomControls() {
+  const zoomOutBtn = document.getElementById('chart-zoom-out');
+  const zoomInBtn  = document.getElementById('chart-zoom-in');
+
+  if (!zoomOutBtn || !zoomInBtn) return;
+
+  zoomOutBtn.addEventListener('click', () => setChartZoomByStep(-1));
+  zoomInBtn.addEventListener('click', () => setChartZoomByStep(1));
+  updateChartZoomControls();
+}
+
+function setChartZoomByStep(direction) {
+  const currentIndex = chartZoomIndex();
+  const nextIndex = Math.min(
+    CHART_ZOOM_LEVELS.length - 1,
+    Math.max(0, currentIndex + direction)
+  );
+
+  if (nextIndex === currentIndex) return;
+
+  _chartZoom = CHART_ZOOM_LEVELS[nextIndex];
+  updateChartZoomControls();
+  autoRender();
+}
+
+function chartZoomIndex() {
+  const exactIndex = CHART_ZOOM_LEVELS.indexOf(_chartZoom);
+  if (exactIndex !== -1) return exactIndex;
+
+  let nearestIndex = 0;
+  let nearestDistance = Infinity;
+  for (let i = 0; i < CHART_ZOOM_LEVELS.length; i++) {
+    const distance = Math.abs(CHART_ZOOM_LEVELS[i] - _chartZoom);
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearestIndex = i;
+    }
+  }
+  return nearestIndex;
+}
+
+function updateChartZoomControls() {
+  const group = document.querySelector('.chart-zoom-controls');
+  const zoomOutBtn = document.getElementById('chart-zoom-out');
+  const zoomInBtn  = document.getElementById('chart-zoom-in');
+  if (!zoomOutBtn || !zoomInBtn) return;
+
+  const chartBody = document.querySelector('#chart-panel .panel__body');
+  const hasChart = Boolean(chartBody?._chartSvg);
+  const currentIndex = chartZoomIndex();
+  const zoomPercent = Math.round(_chartZoom * 100);
+
+  if (group) group.setAttribute('aria-label', t('chart.zoom.controls'));
+
+  const zoomOutLabel = t('chart.zoom.out');
+  zoomOutBtn.title = `${zoomOutLabel} (${zoomPercent}%)`;
+  zoomOutBtn.setAttribute('aria-label', zoomOutLabel);
+  zoomOutBtn.disabled = !hasChart || currentIndex <= 0;
+
+  const zoomInLabel = t('chart.zoom.in');
+  zoomInBtn.title = `${zoomInLabel} (${zoomPercent}%)`;
+  zoomInBtn.setAttribute('aria-label', zoomInLabel);
+  zoomInBtn.disabled = !hasChart || currentIndex >= CHART_ZOOM_LEVELS.length - 1;
 }
 
 // ── Tree panel collapse ──────────────────────────────────────────────────────
@@ -542,6 +615,7 @@ function applyStaticTranslations() {
   if (chartHeader) chartHeader.textContent = t('panel.chart.header');
 
   updateTreePanelToggleLabels();
+  updateChartZoomControls();
   updateSettingsDrawerLabels();
 }
 

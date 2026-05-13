@@ -55,7 +55,7 @@ const ACTUAL_SPENDING_OVERRUN_LABEL_CHAR_WIDTH = 6.2;
  *
  * @param {HTMLElement} container
  * @param {import('../model/tree.js').Knoop} root
- * @param {{ showPercentage: boolean, colorScheme: string, customColor?: string, showActualSpending?: boolean, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }> }} settings
+zoo * @param {{ showPercentage: boolean, colorScheme: string, customColor?: string, showActualSpending?: boolean, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }>, chartZoom?: number }} settings
  */
 export function renderChart(container, root, settings = { showPercentage: true, colorScheme: 'blauw' }) {
   // Measure available width via a cascade of fallbacks.
@@ -68,7 +68,8 @@ export function renderChart(container, root, settings = { showPercentage: true, 
     (panelBody  ? panelBody.clientWidth  : 0)                          ||
     (panelChart ? Math.round(panelChart.getBoundingClientRect().width) : 0) ||
     (window.innerWidth - (document.querySelector('.panel--tree')?.offsetWidth ?? 0));
-  const containerWidth = Math.max(200, measured);
+  const chartZoom = normalizeChartZoom(settings.chartZoom);
+  const containerWidth = Math.max(200, measured / chartZoom);
 
   container.innerHTML = `<div class="chart-loading">${t('chart.calculating')}</div>`;
 
@@ -149,6 +150,12 @@ export function renderChart(container, root, settings = { showPercentage: true, 
  */
 export function getRenderSvg(container) {
   return container._chartSvg || null;
+}
+
+function normalizeChartZoom(value) {
+  const zoom = Number(value);
+  if (!Number.isFinite(zoom) || zoom <= 0) return 1;
+  return Math.min(2, Math.max(0.5, zoom));
 }
 
 // ── Box builder ───────────────────────────────────────────────────────────────

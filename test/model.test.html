@@ -1113,6 +1113,34 @@
       assert(layout.sizeIndicators.length === 0);
     });
 
+    test('chart renderer supports chart-specific zoom levels', () => {
+      const root = makeRoot('Project');
+      const act = addChild(root, 'Activiteit');
+      setOmvang(act, 5);
+
+      const container = document.createElement('div');
+      container.style.width = '700px';
+      document.body.appendChild(container);
+
+      renderChart(container, root, {
+        showPercentage: false,
+        colorScheme: 'blauw',
+        chartZoom: 1,
+      });
+      const normalViewBox = container.querySelector('svg').getAttribute('viewBox').split(' ').map(Number);
+
+      renderChart(container, root, {
+        showPercentage: false,
+        colorScheme: 'blauw',
+        chartZoom: 0.75,
+      });
+      const zoomedOutViewBox = container.querySelector('svg').getAttribute('viewBox').split(' ').map(Number);
+
+      assert(zoomedOutViewBox[2] > normalViewBox[2], 'Zooming out should use a wider virtual layout');
+
+      document.body.removeChild(container);
+    });
+
     test('chart renderer shows actual spending marker only when enabled', () => {
       const root = makeRoot('Project');
       const act = addChild(root, 'Activiteit');

@@ -36,6 +36,7 @@ const HELP_CONTENT = {
     { type: 'paragraph', key: 'intro' },
     { type: 'list', keys: ['item.size', 'item.fill', 'item.rollup'] },
     { type: 'paragraph', key: 'actualSpending' },
+    { type: 'paragraph', key: 'zoom' },
     { type: 'paragraph', key: 'settings' },
     { type: 'paragraph', key: 'download' },
   ],
