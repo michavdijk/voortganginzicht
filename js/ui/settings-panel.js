@@ -3,6 +3,7 @@
  *
  * Renders a compact settings section with chart options:
  * – "Percentage opnemen in output" checkbox
+ * – "Legenda tonen" checkbox
  * – "Actuele besteding tonen" checkbox
  * – "Kleurenschema" dropdown
  * – optional size indicators
@@ -160,6 +161,28 @@ function render() {
   actualSpendingLabel.prepend(actualSpendingCheckbox);
   actualSpendingRow.appendChild(actualSpendingLabel);
   _container.appendChild(actualSpendingRow);
+
+  // ── Legend toggle ────────────────────────────────────────────────────────────
+  const legendRow = buildRow();
+
+  const legendLabel = document.createElement('label');
+  legendLabel.className = 'settings-panel__label';
+  legendLabel.textContent = t('settings.legend');
+
+  const legendCheckbox = document.createElement('input');
+  legendCheckbox.type = 'checkbox';
+  legendCheckbox.className = 'settings-panel__checkbox';
+  legendCheckbox.checked = settings.showLegend;
+  legendCheckbox.addEventListener('change', () => {
+    updateSettings({ showLegend: legendCheckbox.checked });
+    emit('settings-changed');
+  });
+
+  legendLabel.prepend(legendCheckbox);
+  legendRow.appendChild(legendLabel);
+  _container.appendChild(legendRow);
+
+
 }
 
 function buildRow() {

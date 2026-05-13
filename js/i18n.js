@@ -94,6 +94,8 @@ const translations = {
     'help.settings.intro':              'Met de instellingen bepaal je hoe het voortgangsrapport wordt weergegeven. Je opent de instellingen met het tandwiel bij het voortgangsrapport.',
     'help.settings.percentage.heading': 'Voortgangspercentages tonen',
     'help.settings.percentage.body':    'Bepaalt of voortgangspercentages zichtbaar zijn in de blokken van het voortgangsrapport.',
+    'help.settings.legend.heading':     'Legenda tonen',
+    'help.settings.legend.body':        'Bepaalt of de legenda onder het voortgangsrapport zichtbaar is.',
     'help.settings.color.heading':      'Kleurenschema',
     'help.settings.color.body':         'Hiermee pas je de hoofdkleur van de voortgangsbalken aan. Met "Aangepast" kun je zelf een kleur kiezen.',
     'help.settings.sizeIndicators.heading': 'Omvangindicatoren tonen',
@@ -142,6 +144,7 @@ const translations = {
     'type.activiteit':                  'Activiteit',
 
     'settings.percentage':              'Voortgangspercentages tonen',
+    'settings.legend':                  'Legenda tonen',
     'settings.colorScheme':             'Kleurenschema',
     'settings.color.blauw':             'Blauw',
     'settings.color.rood':              'Rood',
@@ -279,6 +282,8 @@ const translations = {
     'help.settings.intro':              'Settings control how the progress report is displayed. Open Settings with the gear icon next to the progress report.',
     'help.settings.percentage.heading': 'Show progress percentages',
     'help.settings.percentage.body':    'Controls whether progress percentages are visible inside the blocks of the progress report.',
+    'help.settings.legend.heading':     'Show legend',
+    'help.settings.legend.body':        'Controls whether the legend below the progress report is visible.',
     'help.settings.color.heading':      'Color scheme',
     'help.settings.color.body':         'Changes the main color of the progress bars. Choose "Custom" to pick your own color.',
     'help.settings.sizeIndicators.heading': 'Show size indicators',
@@ -327,6 +332,7 @@ const translations = {
     'type.activiteit':                  'Activity',
 
     'settings.percentage':              'Show progress percentages',
+    'settings.legend':                  'Show legend',
     'settings.colorScheme':             'Color scheme',
     'settings.color.blauw':             'Blue',
     'settings.color.rood':              'Red',

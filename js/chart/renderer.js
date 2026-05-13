@@ -21,7 +21,7 @@ import {
   FONT_FAMILY,
   SIZE_GUIDE_HEIGHT,
 } from './layout.js';
-import { calcEffectiveActualSpending, calcEffectiveOmvang, hasActualSpending } from './progress-calc.js';
+import { calcEffectiveActualSpending, calcEffectiveOmvang } from './progress-calc.js';
 import { getColorPalette, normalizeSizeIndicators } from '../model/settings.js';
 import { t } from '../i18n.js';
 
@@ -55,7 +55,7 @@ const ACTUAL_SPENDING_OVERRUN_LABEL_CHAR_WIDTH = 6.2;
  *
  * @param {HTMLElement} container
  * @param {import('../model/tree.js').Knoop} root
-zoo * @param {{ showPercentage: boolean, colorScheme: string, customColor?: string, showActualSpending?: boolean, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }>, chartZoom?: number }} settings
+ * @param {{ showPercentage: boolean, showLegend?: boolean, colorScheme: string, customColor?: string, showActualSpending?: boolean, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }>, chartZoom?: number }} settings
  */
 export function renderChart(container, root, settings = { showPercentage: true, colorScheme: 'blauw' }) {
   // Measure available width via a cascade of fallbacks.
@@ -113,12 +113,14 @@ export function renderChart(container, root, settings = { showPercentage: true, 
     svg.appendChild(buildSizeGuide(sizeGuide));
   }
 
-  // Add actual spending legend if needed
+  // Add legend if enabled.
   const legendWidth = 168;
-  const legendHeight = 92;
+  const showActualSpendingLegendRow = Boolean(settings.showActualSpending) &&
+    boxes.some(box => canRenderActualSpendingMarker(box, Boolean(settings.showPercentage)));
+  const legendHeight = showActualSpendingLegendRow ? 92 : 60;
   let extendedTotalHeight = totalHeight;
 
-  if (settings.showActualSpending && hasActualSpending(root)) {
+  if (settings.showLegend !== false) {
     const contentRight = boxes.length > 0 ? Math.max(...boxes.map(b => b.x + b.width)) : totalWidth - 16;
     const legendX = Math.max(contentRight - legendWidth, 16);
     const legendY = sizeIndicators.length > 0
@@ -132,7 +134,7 @@ export function renderChart(container, root, settings = { showPercentage: true, 
       extendedTotalHeight = legendBottom;
     }
 
-    svg.appendChild(buildActualSpendingLegend(legendX, legendY, legendWidth, legendHeight, palette));
+    svg.appendChild(buildLegend(legendX, legendY, legendWidth, legendHeight, palette, showActualSpendingLegendRow));
   }
 
   svg.setAttribute('viewBox', `0 0 ${totalWidth} ${extendedTotalHeight}`);
@@ -156,6 +158,23 @@ function normalizeChartZoom(value) {
   const zoom = Number(value);
   if (!Number.isFinite(zoom) || zoom <= 0) return 1;
   return Math.min(2, Math.max(0.5, zoom));
+}
+
+function canRenderActualSpendingMarker(box, showPercentage) {
+  const { node, width } = box;
+  const isBranch = node.kinderen.length > 0;
+  const actualSpending = isBranch ? calcEffectiveActualSpending(node) : node.actueleBesteding;
+  const omvang = isBranch ? calcEffectiveOmvang(node) : node.omvang;
+  const pctReserve = showPercentage ? PROGRESS_LABEL_WIDTH + PROGRESS_LABEL_GAP : 0;
+  const trackWidth = Math.max(0, width - 2 * TEXT_H_PADDING - pctReserve);
+
+  return (
+    Number.isFinite(actualSpending) &&
+    Number.isFinite(omvang) &&
+    actualSpending >= 1 &&
+    omvang >= 1 &&
+    trackWidth > 0
+  );
 }
 
 // ── Box builder ───────────────────────────────────────────────────────────────
@@ -411,11 +430,12 @@ function buildActualSpendingMarker({ actualSpending, omvang, trackX, trackY, tra
   return marker;
 }
 
-// ── Actual spending legend builder ───────────────────────────────────────────
+// ── Legend builder ───────────────────────────────────────────────────────────
 
-function buildActualSpendingLegend(x, y, width, height, palette) {
+function buildLegend(x, y, width, height, palette, showActualSpending) {
   const g = createEl('g');
-  g.setAttribute('data-actual-spending-legend', 'true');
+  g.setAttribute('data-chart-legend', 'true');
+  g.setAttribute('data-actual-spending-legend-row', String(showActualSpending));
 
   const background = createEl('rect');
   setAttrs(background, {
@@ -489,31 +509,35 @@ function buildActualSpendingLegend(x, y, width, height, palette) {
   });
   g.appendChild(fill);
 
-  const markerX = leftColumnX + barWidth / 2;
-  const markerTipY = row2Y + 6;
-  const markerTopY = row2Y - 8;
-  const marker = createEl('path');
-  setAttrs(marker, {
-    d: `M ${markerX} ${markerTipY} L ${markerX - ACTUAL_SPENDING_MARKER_HALF_WIDTH} ${markerTopY} L ${markerX + ACTUAL_SPENDING_MARKER_HALF_WIDTH} ${markerTopY} Z`,
-    fill: COLOR_ACTUAL_SPENDING,
-    stroke: COLOR_WHITE,
-    'stroke-width': 1.5,
-    'stroke-linejoin': 'round',
-  });
-  g.appendChild(marker);
+  if (showActualSpending) {
+    const markerX = leftColumnX + barWidth / 2;
+    const markerTipY = row2Y + 6;
+    const markerTopY = row2Y - 8;
+    const marker = createEl('path');
+    marker.setAttribute('data-actual-spending-legend-marker', 'true');
+    setAttrs(marker, {
+      d: `M ${markerX} ${markerTipY} L ${markerX - ACTUAL_SPENDING_MARKER_HALF_WIDTH} ${markerTopY} L ${markerX + ACTUAL_SPENDING_MARKER_HALF_WIDTH} ${markerTopY} Z`,
+      fill: COLOR_ACTUAL_SPENDING,
+      stroke: COLOR_WHITE,
+      'stroke-width': 1.5,
+      'stroke-linejoin': 'round',
+    });
+    g.appendChild(marker);
 
-  const label = createEl('text');
-  setAttrs(label, {
-    x: rightColumnX,
-    y: row2Y,
-    fill: COLOR_TEXT_DARK,
-    'font-size': 12,
-    'font-family': FONT_FAMILY,
-    'font-weight': 400,
-    'dominant-baseline': 'middle',
-  });
-  label.textContent = t('chart.actualSpending.legend');
-  g.appendChild(label);
+    const label = createEl('text');
+    setAttrs(label, {
+      x: rightColumnX,
+      y: row2Y,
+      fill: COLOR_TEXT_DARK,
+      'font-size': 12,
+      'font-family': FONT_FAMILY,
+      'font-weight': 400,
+      'dominant-baseline': 'middle',
+    });
+    label.setAttribute('data-actual-spending-legend-label', 'true');
+    label.textContent = t('chart.actualSpending.legend');
+    g.appendChild(label);
+  }
 
   return g;
 }

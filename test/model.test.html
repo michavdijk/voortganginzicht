@@ -1141,6 +1141,49 @@
       document.body.removeChild(container);
     });
 
+    test('chart renderer shows legend only when enabled and only includes actual spending when markers are visible', () => {
+      const root = makeRoot('Project');
+      const act = addChild(root, 'Activiteit');
+      setOmvang(act, 8);
+      setActueleBesteding(act, 4);
+
+      const container = document.createElement('div');
+      container.style.width = '700px';
+      document.body.appendChild(container);
+
+      renderChart(container, root, {
+        showPercentage: false,
+        showLegend: false,
+        colorScheme: 'blauw',
+        showActualSpending: true,
+      });
+      assert(container.querySelector('[data-chart-legend="true"]') === null, 'Legend should be hidden when disabled');
+
+      renderChart(container, root, {
+        showPercentage: false,
+        showLegend: true,
+        colorScheme: 'blauw',
+        showActualSpending: false,
+      });
+      let legend = container.querySelector('[data-chart-legend="true"]');
+      assert(legend !== null, 'Legend should be shown when enabled');
+      assert(legend.getAttribute('data-actual-spending-legend-row') === 'false');
+      assert(legend.querySelector('[data-actual-spending-legend-label="true"]') === null);
+
+      renderChart(container, root, {
+        showPercentage: false,
+        showLegend: true,
+        colorScheme: 'blauw',
+        showActualSpending: true,
+      });
+      legend = container.querySelector('[data-chart-legend="true"]');
+      assert(legend !== null, 'Legend should still be shown');
+      assert(legend.getAttribute('data-actual-spending-legend-row') === 'true');
+      assert(legend.querySelector('[data-actual-spending-legend-label="true"]') !== null);
+
+      document.body.removeChild(container);
+    });
+
     test('chart renderer shows actual spending marker only when enabled', () => {
       const root = makeRoot('Project');
       const act = addChild(root, 'Activiteit');
@@ -1248,6 +1291,7 @@
 
       const json = serialize(root, {
         showPercentage: false,
+        showLegend: false,
         colorScheme: 'groen',
         showActualSpending: true,
         showSizeIndicators: true,
@@ -1256,6 +1300,7 @@
       const doc = JSON.parse(json);
 
       assert(doc.instellingen.showActualSpending === true);
+      assert(doc.instellingen.showLegend === false);
       assert(doc.instellingen.showSizeIndicators === true);
       assert(doc.instellingen.sizeIndicators.length === 1);
       assert(doc.instellingen.sizeIndicators[0].omvang === 4);
@@ -1265,6 +1310,7 @@
       const result = deserialize(json);
       assert(result.valid === true);
       assert(result.settings.showActualSpending === true);
+      assert(result.settings.showLegend === false);
       assert(result.settings.showSizeIndicators === true);
       assert(result.settings.sizeIndicators.length === 1);
       assert(result.settings.sizeIndicators[0].label === 'Halverwege');
@@ -1339,6 +1385,7 @@
       }));
 
       assert(result.valid === true);
+      assert(result.settings.showLegend === true);
       assert(result.settings.showActualSpending === false);
       assert(result.settings.showSizeIndicators === false);
       assert(typeof result.settings.customColor === 'string');
@@ -1380,6 +1427,7 @@
     test('resetSettings restores all defaults', () => {
       updateSettings({
         showPercentage: false,
+        showLegend: false,
         colorScheme: CUSTOM_COLOR_SCHEME,
         customColor: '#FFFF00',
         showActualSpending: true,
@@ -1391,6 +1439,7 @@
       const settings = getSettings();
 
       assert(settings.showPercentage === true);
+      assert(settings.showLegend === true);
       assert(settings.colorScheme === 'blauw');
       assert(settings.customColor === '#2563EB');
       assert(settings.showActualSpending === false);
@@ -1422,6 +1471,15 @@
 
       updateSettings({ showActualSpending: false });
       assert(getSettings().showActualSpending === false);
+    });
+
+    test('settings store the legend toggle', () => {
+      resetSettings();
+      updateSettings({ showLegend: false });
+      assert(getSettings().showLegend === false);
+
+      updateSettings({ showLegend: true });
+      assert(getSettings().showLegend === true);
     });
 
     test('custom color palette derives background and readable text colors', () => {
