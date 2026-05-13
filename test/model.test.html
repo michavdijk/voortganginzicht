@@ -55,6 +55,7 @@
     import { getRoot, setRoot, isDirty, markClean, newProject } from '../js/model/project.js';
     import { CUSTOM_COLOR_SCHEME, getColorPalette, getSettings, updateSettings, resetSettings, normalizeSizeIndicators } from '../js/model/settings.js';
     import { computeLayout, FIXED_WIDTH, TEXT_H_PADDING, wrapTextToWidth } from '../js/chart/layout.js';
+    import { calcEffectiveActualSpending } from '../js/chart/progress-calc.js';
     import { renderChart } from '../js/chart/renderer.js';
     import { serialize, deserialize } from '../js/io/serializer.js';
 
@@ -1161,6 +1162,47 @@
         showActualSpending: true,
       });
       assert(container.querySelector('[data-actual-spending-marker="true"]') === null);
+
+      document.body.removeChild(container);
+    });
+
+    test('chart renderer rolls actual spending up to subgoals and goal', () => {
+      const root = makeRoot('Project');
+      const sub = addChild(root, 'Subdoel');
+      const actA = addChild(sub, 'Activiteit A');
+      const actB = addChild(sub, 'Activiteit B');
+      const directAct = addChild(root, 'Losse activiteit');
+
+      setOmvang(actA, 6);
+      setActueleBesteding(actA, 2);
+      setOmvang(actB, 4);
+      setActueleBesteding(actB, 3);
+      setOmvang(directAct, 10);
+      setActueleBesteding(directAct, 1);
+
+      assert(calcEffectiveActualSpending(sub) === 5, 'Subdoel actual spending should be summed from activities');
+      assert(calcEffectiveActualSpending(root) === 6, 'Goal actual spending should be summed from activities');
+
+      const container = document.createElement('div');
+      container.style.width = '800px';
+      document.body.appendChild(container);
+
+      renderChart(container, root, {
+        showPercentage: false,
+        colorScheme: 'blauw',
+        showActualSpending: true,
+      });
+
+      const markers = Array.from(container.querySelectorAll('[data-actual-spending-marker="true"]'));
+      assert(markers.length === 5, 'Expected markers for three activities, one subgoal, and one goal');
+
+      const subMarker = markers.find(marker => marker.getAttribute('data-actual-spending-value') === '5');
+      assert(subMarker !== undefined, 'Expected subgoal aggregate actual spending marker');
+      assert(subMarker.getAttribute('data-actual-spending-percentage') === '50');
+
+      const goalMarker = markers.find(marker => marker.getAttribute('data-actual-spending-value') === '6');
+      assert(goalMarker !== undefined, 'Expected goal aggregate actual spending marker');
+      assert(goalMarker.getAttribute('data-actual-spending-percentage') === '30');
 
       document.body.removeChild(container);
     });

@@ -21,7 +21,7 @@ import {
   FONT_FAMILY,
   SIZE_GUIDE_HEIGHT,
 } from './layout.js';
-import { hasActualSpending } from './progress-calc.js';
+import { calcEffectiveActualSpending, calcEffectiveOmvang, hasActualSpending } from './progress-calc.js';
 import { getColorPalette, normalizeSizeIndicators } from '../model/settings.js';
 import { t } from '../i18n.js';
 
@@ -176,6 +176,8 @@ function buildBox(box, palette, showPercentage, showActualSpending) {
   const titleHeight = height - PROGRESS_BAR_HEIGHT;
   const barY        = y + titleHeight;
   const isBranch    = node.kinderen.length > 0;
+  const effectiveOmvang = isBranch ? calcEffectiveOmvang(node) : node.omvang;
+  const effectiveActualSpending = isBranch ? calcEffectiveActualSpending(node) : node.actueleBesteding;
   const titleFill   = isBranch ? COLOR_WHITE : palette.bg;
   const borderColor = isBranch ? (palette.text ?? palette.fill) : palette.border;
   const titleColor  = isBranch ? (palette.text ?? palette.fill) : COLOR_TEXT_DARK;
@@ -206,8 +208,8 @@ function buildBox(box, palette, showPercentage, showActualSpending) {
     palette,
     showPercentage,
     clipId,
-    actualSpending: showActualSpending && !isBranch ? node.actueleBesteding : null,
-    omvang: !isBranch ? node.omvang : null,
+    actualSpending: showActualSpending ? effectiveActualSpending : null,
+    omvang: effectiveOmvang,
   });
 
   // ── Divider line ──────────────────────────────────────────────────────────

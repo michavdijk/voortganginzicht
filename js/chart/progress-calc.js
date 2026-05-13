@@ -1,8 +1,8 @@
 /**
  * Weighted progress calculation module.
  *
- * Provides recursive calculation of weighted voortgang and effective omvang
- * for any node in the work-breakdown tree.
+ * Provides recursive calculation of weighted voortgang, effective omvang,
+ * and effective actual spending for any node in the work-breakdown tree.
  */
 
 import { getType } from '../model/tree.js';
@@ -57,6 +57,26 @@ export function calcEffectiveOmvang(node) {
 }
 
 /**
+ * Calculate the effective actual spending for a node.
+ *
+ * - Activiteit (leaf): returns node.actueleBesteding (or 0 if unset).
+ * - Branch: sum of all descendant Activiteiten actual spending values.
+ *
+ * @param {import('../model/tree.js').Knoop} node
+ * @returns {number}
+ */
+export function calcEffectiveActualSpending(node) {
+  if (getType(node) === 'Activiteit') {
+    return Number.isFinite(node.actueleBesteding) ? node.actueleBesteding : 0;
+  }
+  let total = 0;
+  for (const child of node.kinderen) {
+    total += calcEffectiveActualSpending(child);
+  }
+  return total;
+}
+
+/**
  * Flatten all leaf nodes (Activiteiten) from the subtree rooted at node.
  *
  * @param {import('../model/tree.js').Knoop} node
@@ -80,6 +100,5 @@ export function getAllActiviteiten(node) {
  * @returns {boolean}
  */
 export function hasActualSpending(node) {
-  const activiteiten = getAllActiviteiten(node);
-  return activiteiten.some(a => Number.isFinite(a.actueleBesteding) && a.actueleBesteding > 0);
+  return calcEffectiveActualSpending(node) > 0;
 }
