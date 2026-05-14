@@ -26,7 +26,7 @@ import { t } from './i18n.js';
 
 const PROJECT_NAME_MAX_LENGTH = 100;
 const PHONE_MAX_SHORT_SIDE = 600;
-const CHART_ZOOM_LEVELS = [0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5];
+const CHART_ZOOM_LEVELS = [0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2];
 let appInitialized = false;
 let appShell = null;
 let originalBodyClass = '';
@@ -233,17 +233,27 @@ function countActiviteitenWithoutOmvang(node) {
 function initChartZoomControls() {
   const zoomOutBtn = document.getElementById('chart-zoom-out');
   const zoomInBtn  = document.getElementById('chart-zoom-in');
+  const zoomLevelBtn = document.getElementById('chart-zoom-level');
 
   if (!zoomOutBtn || !zoomInBtn) return;
 
   zoomOutBtn.addEventListener('click', () => setChartZoomByStep(-1));
   zoomInBtn.addEventListener('click', () => setChartZoomByStep(1));
+  if (zoomLevelBtn) zoomLevelBtn.addEventListener('click', resetChartZoomFromControl);
   updateChartZoomControls();
 }
 
 function resetChartZoom() {
   _chartZoom = 1;
   updateChartZoomControls();
+}
+
+function resetChartZoomFromControl() {
+  if (_chartZoom === 1) return;
+
+  _chartZoom = 1;
+  updateChartZoomControls();
+  autoRender();
 }
 
 function setChartZoomByStep(direction) {
@@ -292,9 +302,13 @@ function updateChartZoomControls() {
   if (group) group.setAttribute('aria-label', t('chart.zoom.controls'));
   if (zoomLevelEl) {
     zoomLevelEl.textContent = zoomText;
-    const zoomLevelLabel = t('chart.zoom.level', { value: zoomText });
+    const canResetZoom = _chartZoom !== 1;
+    const zoomLevelLabel = canResetZoom
+      ? t('chart.zoom.reset', { value: zoomText })
+      : t('chart.zoom.level', { value: zoomText });
     zoomLevelEl.title = zoomLevelLabel;
     zoomLevelEl.setAttribute('aria-label', zoomLevelLabel);
+    zoomLevelEl.disabled = !canResetZoom;
   }
 
   const zoomOutLabel = t('chart.zoom.out');

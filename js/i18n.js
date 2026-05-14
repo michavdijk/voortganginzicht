@@ -47,6 +47,7 @@ const translations = {
     'chart.zoom.in':                     'Inzoomen',
     'chart.zoom.level':                  'Huidig zoomniveau: {value}',
     'chart.zoom.out':                    'Uitzoomen',
+    'chart.zoom.reset':                  'Terug naar 100% (nu {value})',
 
     'project.prompt.name':              'Projectnaam:',
     'project.untitled':                 'Naamloos project',
@@ -90,7 +91,7 @@ const translations = {
     'help.chart.item.rollup':           'De voortgang van bovenliggende onderdelen wordt automatisch berekend op basis van de onderliggende activiteiten.',
     'help.chart.item.complete':         'Een groen vinkje geeft aan dat een doel, subdoel of activiteit klaar is (100%).',
     'help.chart.actualSpending':        'Als de optie "Actuele besteding tonen" is ingeschakeld bij Instellingen, wordt bij activiteiten, subdoelen en het doel ook de actuele besteding weergegeven. Voor subdoelen en het doel wordt deze berekend als de som van de onderliggende activiteiten. De markering laat zien hoeveel omvang er tot nu toe besteed is ten opzichte van de totale omvang.',
-    'help.chart.zoom':                  'Gebruik de plus- en minknoppen bij het voortgangsrapport om alleen de plaat in of uit te zoomen. Het percentage tussen de knoppen toont het huidige zoomniveau. Bij een nieuw of geopend project begint dit weer op 100%. Dit verandert de browserzoom niet.',
+    'help.chart.zoom':                  'Gebruik de plus- en minknoppen bij het voortgangsrapport om alleen de plaat in of uit te zoomen. Het percentage tussen de knoppen toont het huidige zoomniveau; klik erop om terug te gaan naar 100%. Bij een nieuw of geopend project begint dit weer op 100%. Dit verandert de browserzoom niet.',
     'help.chart.settings':              'Gebruik het tandwiel bij het voortgangsrapport om de weergave van het rapport aan te passen.',
     'help.chart.download':              'Met "Download als PNG" kun je het huidige voortgangsrapport als afbeelding opslaan.',
     'help.settings.nav':                'Instellingen',
@@ -239,6 +240,7 @@ const translations = {
     'chart.zoom.in':                     'Zoom in',
     'chart.zoom.level':                  'Current zoom level: {value}',
     'chart.zoom.out':                    'Zoom out',
+    'chart.zoom.reset':                  'Return to 100% (currently {value})',
 
     'project.prompt.name':              'Project name:',
     'project.untitled':                 'Untitled project',
@@ -282,7 +284,7 @@ const translations = {
     'help.chart.item.rollup':           'Progress for parent items is calculated automatically from the activities below them.',
     'help.chart.item.complete':         'A green check mark indicates that a goal, subgoal, or activity is complete (100%).',
     'help.chart.actualSpending':        'When "Show actual spending" is enabled in Settings, actual spending is also shown for activities, subgoals, and the goal. For subgoals and the goal, it is calculated as the sum of the underlying activities. The marker shows how much size has been spent so far compared with the total size.',
-    'help.chart.zoom':                  'Use the plus and minus buttons next to the progress report to zoom only the chart in or out. The percentage between the buttons shows the current zoom level. New and opened projects start at 100% again. This does not change the browser zoom.',
+    'help.chart.zoom':                  'Use the plus and minus buttons next to the progress report to zoom only the chart in or out. The percentage between the buttons shows the current zoom level; click it to return to 100%. New and opened projects start at 100% again. This does not change the browser zoom.',
     'help.chart.settings':              'Use the gear icon next to the progress report to adjust how the report is displayed.',
     'help.chart.download':              'Use "Download as PNG" to save the current progress report as an image.',
     'help.settings.nav':                'Settings',

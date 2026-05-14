@@ -571,6 +571,7 @@ body {
 }
 
 .chart-zoom-level {
+  appearance: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -580,12 +581,32 @@ body {
   border: 0;
   background: transparent;
   color: var(--color-text-muted);
+  font: inherit;
   font-size: 0.75rem;
   font-weight: 700;
   line-height: 1;
   text-transform: none;
   letter-spacing: 0;
   font-variant-numeric: tabular-nums;
+}
+
+.chart-zoom-level:not(:disabled) {
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.chart-zoom-level:not(:disabled):hover {
+  background: var(--color-surface);
+}
+
+.chart-zoom-level:focus-visible {
+  outline: 2px solid var(--color-btn-primary);
+  outline-offset: 2px;
+}
+
+.chart-zoom-level:disabled {
+  cursor: default;
+  opacity: 1;
 }
 
 .chart-zoom-button {
