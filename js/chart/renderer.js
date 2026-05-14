@@ -34,10 +34,12 @@ const COLOR_GUIDE      = '#475569';
 const COLOR_SIZE_INDICATOR = '#334155';
 const COLOR_ACTUAL_SPENDING = '#0F172A';
 const COLOR_ACTUAL_SPENDING_OVERRUN = '#DC2626';
+const COLOR_COMPLETE = '#16A34A';
 const COLOR_WHITE      = '#FFFFFF';
 const PROGRESS_TRACK_HEIGHT = 6;
 const PROGRESS_LABEL_WIDTH  = 30;
 const PROGRESS_LABEL_GAP    = 8;
+const COMPLETE_ICON_SIZE = 14;
 const ACTUAL_SPENDING_MARKER_HALF_WIDTH = 5;
 const ACTUAL_SPENDING_OVERRUN_LABEL_MIN_WIDTH = 42;
 const ACTUAL_SPENDING_OVERRUN_LABEL_GAP = 2;
@@ -115,9 +117,11 @@ export function renderChart(container, root, settings = { showPercentage: true, 
 
   // Add legend if enabled.
   const legendWidth = 168;
+  const showCompleteLegendRow = boxes.some(box => canRenderCompleteIndicator(box));
   const showActualSpendingLegendRow = Boolean(settings.showActualSpending) &&
     boxes.some(box => canRenderActualSpendingMarker(box, Boolean(settings.showPercentage)));
-  const legendHeight = showActualSpendingLegendRow ? 92 : 60;
+  const legendRows = 1 + (showCompleteLegendRow ? 1 : 0) + (showActualSpendingLegendRow ? 1 : 0);
+  const legendHeight = 36 + legendRows * 24;
   let extendedTotalHeight = totalHeight;
 
   if (settings.showLegend === true) {
@@ -134,7 +138,10 @@ export function renderChart(container, root, settings = { showPercentage: true, 
       extendedTotalHeight = legendBottom;
     }
 
-    svg.appendChild(buildLegend(legendX, legendY, legendWidth, legendHeight, palette, showActualSpendingLegendRow));
+    svg.appendChild(buildLegend(legendX, legendY, legendWidth, legendHeight, palette, {
+      showComplete: showCompleteLegendRow,
+      showActualSpending: showActualSpendingLegendRow,
+    }));
   }
 
   svg.setAttribute('viewBox', `0 0 ${totalWidth} ${extendedTotalHeight}`);
@@ -174,6 +181,15 @@ function canRenderActualSpendingMarker(box, showPercentage) {
     actualSpending >= 1 &&
     omvang >= 1 &&
     trackWidth > 0
+  );
+}
+
+function canRenderCompleteIndicator(box) {
+  const titleHeight = box.height - PROGRESS_BAR_HEIGHT;
+  return (
+    box.progress >= 99.999 &&
+    titleHeight >= COMPLETE_ICON_SIZE + 4 &&
+    box.width > 2 * TEXT_H_PADDING + COMPLETE_ICON_SIZE
   );
 }
 
@@ -237,6 +253,15 @@ function buildBox(box, palette, showPercentage, showActualSpending) {
     actualSpending: showActualSpending ? effectiveActualSpending : null,
     omvang: effectiveOmvang,
   });
+  const completeIndicator = buildCompleteIndicator({
+    x,
+    y,
+    width,
+    titleHeight,
+    clipId,
+    isComplete: progress >= 99.999,
+  });
+  if (completeIndicator) g.appendChild(completeIndicator);
 
   // ── Divider line ──────────────────────────────────────────────────────────
   const divider = createEl('line');
@@ -344,6 +369,52 @@ function buildProgressBar(g, { x, y, width, progress, palette, showPercentage, c
   g.appendChild(pctText);
 }
 
+function buildCompleteIndicator({ x, y, width, titleHeight, clipId, isComplete }) {
+  if (!isComplete || titleHeight < COMPLETE_ICON_SIZE + 4 || width <= 2 * TEXT_H_PADDING + COMPLETE_ICON_SIZE) {
+    return null;
+  }
+
+  const rightEdge = x + width - TEXT_H_PADDING;
+  const iconCenterX = rightEdge - COMPLETE_ICON_SIZE / 2;
+  const iconCenterY = y + Math.min(titleHeight / 2, TEXT_V_PADDING + COMPLETE_ICON_SIZE / 2);
+  const half = COMPLETE_ICON_SIZE / 2;
+
+  const indicator = createEl('g');
+  indicator.setAttribute('clip-path', `url(#${clipId})`);
+  indicator.setAttribute('data-complete-indicator', 'true');
+
+  const title = createEl('title');
+  title.textContent = t('chart.complete.title');
+  indicator.appendChild(title);
+
+  const check = createEl('path');
+  const checkPath = `M ${iconCenterX - half + 2} ${iconCenterY} L ${iconCenterX - 1} ${iconCenterY + 4} L ${iconCenterX + half - 2} ${iconCenterY - 4}`;
+
+  const halo = createEl('path');
+  setAttrs(halo, {
+    d: checkPath,
+    fill: 'none',
+    stroke: COLOR_WHITE,
+    'stroke-width': 5,
+    'stroke-linecap': 'round',
+    'stroke-linejoin': 'round',
+    'stroke-opacity': 0.92,
+  });
+  indicator.appendChild(halo);
+
+  setAttrs(check, {
+    d: checkPath,
+    fill: 'none',
+    stroke: COLOR_COMPLETE,
+    'stroke-width': 2.4,
+    'stroke-linecap': 'round',
+    'stroke-linejoin': 'round',
+  });
+  indicator.appendChild(check);
+
+  return indicator;
+}
+
 function buildActualSpendingMarker({ actualSpending, omvang, trackX, trackY, trackWidth, clipId }) {
   if (
     !Number.isFinite(actualSpending) ||
@@ -432,9 +503,10 @@ function buildActualSpendingMarker({ actualSpending, omvang, trackX, trackY, tra
 
 // ── Legend builder ───────────────────────────────────────────────────────────
 
-function buildLegend(x, y, width, height, palette, showActualSpending) {
+function buildLegend(x, y, width, height, palette, { showComplete, showActualSpending }) {
   const g = createEl('g');
   g.setAttribute('data-chart-legend', 'true');
+  g.setAttribute('data-complete-legend-row', String(showComplete));
   g.setAttribute('data-actual-spending-legend-row', String(showActualSpending));
 
   const background = createEl('rect');
@@ -465,13 +537,12 @@ function buildLegend(x, y, width, height, palette, showActualSpending) {
 
   const leftColumnX = x + 12;
   const rightColumnX = x + 56;
-  const row1Y = y + 34;
-  const row2Y = y + 58;
+  let rowY = y + 34;
 
   const progressLabel = createEl('text');
   setAttrs(progressLabel, {
     x: rightColumnX,
-    y: row1Y,
+    y: rowY,
     fill: COLOR_TEXT_DARK,
     'font-size': 12,
     'font-family': FONT_FAMILY,
@@ -482,7 +553,7 @@ function buildLegend(x, y, width, height, palette, showActualSpending) {
   g.appendChild(progressLabel);
 
   const barX = leftColumnX;
-  const barY = row1Y - 5;
+  const barY = rowY - 5;
   const barWidth = 36;
   const trackHeight = PROGRESS_TRACK_HEIGHT;
   const fillWidth = Math.max(0, barWidth * 0.5);
@@ -508,11 +579,59 @@ function buildLegend(x, y, width, height, palette, showActualSpending) {
     fill: palette.fill,
   });
   g.appendChild(fill);
+  rowY += 24;
+
+  if (showComplete) {
+    const markerX = leftColumnX + barWidth / 2;
+    const markerY = rowY;
+    const half = COMPLETE_ICON_SIZE / 2;
+    const checkPath = `M ${markerX - half + 2} ${markerY} L ${markerX - 1} ${markerY + 4} L ${markerX + half - 2} ${markerY - 4}`;
+
+    const halo = createEl('path');
+    setAttrs(halo, {
+      d: checkPath,
+      fill: 'none',
+      stroke: COLOR_WHITE,
+      'stroke-width': 5,
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round',
+      'stroke-opacity': 0.92,
+    });
+    g.appendChild(halo);
+
+    const check = createEl('path');
+    check.setAttribute('data-complete-legend-marker', 'true');
+    setAttrs(check, {
+      d: checkPath,
+      fill: 'none',
+      stroke: COLOR_COMPLETE,
+      'stroke-width': 2.4,
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round',
+    });
+    g.appendChild(check);
+
+    const label = createEl('text');
+    setAttrs(label, {
+      x: rightColumnX,
+      y: rowY,
+      fill: COLOR_TEXT_DARK,
+      'font-size': 12,
+      'font-family': FONT_FAMILY,
+      'font-weight': 400,
+      'dominant-baseline': 'middle',
+    });
+    label.setAttribute('data-complete-legend-label', 'true');
+    label.textContent = t('chart.complete.legend');
+    g.appendChild(label);
+
+    rowY += 24;
+  }
 
   if (showActualSpending) {
     const markerX = leftColumnX + barWidth / 2;
-    const markerTipY = row2Y + 6;
-    const markerTopY = row2Y - 8;
+    const markerTipY = rowY + 6;
+    const markerTopY = rowY - 8;
     const marker = createEl('path');
     marker.setAttribute('data-actual-spending-legend-marker', 'true');
     setAttrs(marker, {
@@ -527,7 +646,7 @@ function buildLegend(x, y, width, height, palette, showActualSpending) {
     const label = createEl('text');
     setAttrs(label, {
       x: rightColumnX,
-      y: row2Y,
+      y: rowY,
       fill: COLOR_TEXT_DARK,
       'font-size': 12,
       'font-family': FONT_FAMILY,

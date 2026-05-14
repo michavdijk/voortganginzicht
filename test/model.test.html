@@ -1167,7 +1167,9 @@
       });
       let legend = container.querySelector('[data-chart-legend="true"]');
       assert(legend !== null, 'Legend should be shown when enabled');
+      assert(legend.getAttribute('data-complete-legend-row') === 'false');
       assert(legend.getAttribute('data-actual-spending-legend-row') === 'false');
+      assert(legend.querySelector('[data-complete-legend-label="true"]') === null);
       assert(legend.querySelector('[data-actual-spending-legend-label="true"]') === null);
 
       renderChart(container, root, {
@@ -1178,8 +1180,58 @@
       });
       legend = container.querySelector('[data-chart-legend="true"]');
       assert(legend !== null, 'Legend should still be shown');
+      assert(legend.getAttribute('data-complete-legend-row') === 'false');
       assert(legend.getAttribute('data-actual-spending-legend-row') === 'true');
       assert(legend.querySelector('[data-actual-spending-legend-label="true"]') !== null);
+
+      document.body.removeChild(container);
+    });
+
+    test('chart renderer marks completed nodes with a quiet check indicator', () => {
+      const root = makeRoot('Project');
+      const sub = addChild(root, 'Subdoel');
+      const actA = addChild(sub, 'Activiteit A');
+      const actB = addChild(sub, 'Activiteit B');
+
+      setOmvang(actA, 4);
+      setVoortgang(actA, 100);
+      setOmvang(actB, 6);
+      setVoortgang(actB, 100);
+
+      const container = document.createElement('div');
+      container.style.width = '700px';
+      document.body.appendChild(container);
+
+      renderChart(container, root, {
+        showPercentage: false,
+        colorScheme: 'blauw',
+      });
+
+      const completeIndicators = container.querySelectorAll('[data-complete-indicator="true"]');
+      assert(completeIndicators.length === 4, 'Expected complete indicators for both activities, subgoal, and goal');
+      assert(completeIndicators[0].querySelector('title')?.textContent === 'Klaar');
+
+      setVoortgang(actB, 50);
+      renderChart(container, root, {
+        showPercentage: false,
+        colorScheme: 'blauw',
+      });
+
+      assert(
+        container.querySelectorAll('[data-complete-indicator="true"]').length === 1,
+        'Only the 100% activity should keep a complete indicator'
+      );
+
+      renderChart(container, root, {
+        showPercentage: false,
+        showLegend: true,
+        colorScheme: 'blauw',
+      });
+
+      const legend = container.querySelector('[data-chart-legend="true"]');
+      assert(legend !== null, 'Legend should be shown');
+      assert(legend.getAttribute('data-complete-legend-row') === 'true');
+      assert(legend.querySelector('[data-complete-legend-label="true"]')?.textContent === 'Afgerond');
 
       document.body.removeChild(container);
     });

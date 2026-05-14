@@ -34,7 +34,7 @@ const HELP_CONTENT = {
   ],
   chart: [
     { type: 'paragraph', key: 'intro' },
-    { type: 'list', keys: ['item.size', 'item.fill', 'item.rollup'] },
+    { type: 'list', keys: ['item.size', 'item.fill', 'item.rollup', 'item.complete'] },
     { type: 'paragraph', key: 'actualSpending' },
     { type: 'paragraph', key: 'zoom' },
     { type: 'paragraph', key: 'settings' },
