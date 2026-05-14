@@ -1207,7 +1207,16 @@
         colorScheme: 'blauw',
       });
 
-      const completeIndicators = container.querySelectorAll('[data-complete-indicator="true"]');
+      let completeIndicators = container.querySelectorAll('[data-complete-indicator="true"]');
+      assert(completeIndicators.length === 0, 'Completion check indicators should be hidden by default');
+
+      renderChart(container, root, {
+        showPercentage: false,
+        colorScheme: 'blauw',
+        showCompleteCheck: true,
+      });
+
+      completeIndicators = container.querySelectorAll('[data-complete-indicator="true"]');
       assert(completeIndicators.length === 4, 'Expected complete indicators for both activities, subgoal, and goal');
       assert(completeIndicators[0].querySelector('title')?.textContent === 'Klaar');
 
@@ -1215,6 +1224,7 @@
       renderChart(container, root, {
         showPercentage: false,
         colorScheme: 'blauw',
+        showCompleteCheck: true,
       });
 
       assert(
@@ -1226,6 +1236,7 @@
         showPercentage: false,
         showLegend: true,
         colorScheme: 'blauw',
+        showCompleteCheck: true,
       });
 
       const legend = container.querySelector('[data-chart-legend="true"]');
@@ -1343,6 +1354,7 @@
 
       const json = serialize(root, {
         showPercentage: false,
+        showCompleteCheck: true,
         showLegend: false,
         colorScheme: 'groen',
         showActualSpending: true,
@@ -1351,6 +1363,7 @@
       }, 'Testproject');
       const doc = JSON.parse(json);
 
+      assert(doc.instellingen.showCompleteCheck === true);
       assert(doc.instellingen.showActualSpending === true);
       assert(doc.instellingen.showLegend === false);
       assert(doc.instellingen.showSizeIndicators === true);
@@ -1361,6 +1374,7 @@
 
       const result = deserialize(json);
       assert(result.valid === true);
+      assert(result.settings.showCompleteCheck === true);
       assert(result.settings.showActualSpending === true);
       assert(result.settings.showLegend === false);
       assert(result.settings.showSizeIndicators === true);
@@ -1438,6 +1452,7 @@
 
       assert(result.valid === true);
       assert(result.settings.showLegend === false);
+      assert(result.settings.showCompleteCheck === false);
       assert(result.settings.showActualSpending === false);
       assert(result.settings.showSizeIndicators === false);
       assert(typeof result.settings.customColor === 'string');
@@ -1479,6 +1494,7 @@
     test('resetSettings restores all defaults', () => {
       updateSettings({
         showPercentage: false,
+        showCompleteCheck: true,
         showLegend: true,
         colorScheme: CUSTOM_COLOR_SCHEME,
         customColor: '#FFFF00',
@@ -1491,6 +1507,7 @@
       const settings = getSettings();
 
       assert(settings.showPercentage === true);
+      assert(settings.showCompleteCheck === false);
       assert(settings.showLegend === false);
       assert(settings.colorScheme === 'blauw');
       assert(settings.customColor === '#2563EB');
@@ -1523,6 +1540,15 @@
 
       updateSettings({ showActualSpending: false });
       assert(getSettings().showActualSpending === false);
+    });
+
+    test('settings store the complete check toggle', () => {
+      resetSettings();
+      updateSettings({ showCompleteCheck: true });
+      assert(getSettings().showCompleteCheck === true);
+
+      updateSettings({ showCompleteCheck: false });
+      assert(getSettings().showCompleteCheck === false);
     });
 
     test('settings store the legend toggle', () => {

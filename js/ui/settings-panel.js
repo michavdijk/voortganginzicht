@@ -3,6 +3,7 @@
  *
  * Renders a compact settings section with chart options:
  * – "Percentage opnemen in output" checkbox
+ * – "Vinkje bij voltooid tonen" checkbox
  * – "Legenda tonen" checkbox
  * – "Actuele besteding tonen" checkbox
  * – "Kleurenschema" dropdown
@@ -110,6 +111,26 @@ function render() {
   pctLabel.prepend(pctCheckbox);
   percentageRow.appendChild(pctLabel);
   _container.appendChild(percentageRow);
+
+  // ── Complete check toggle ──────────────────────────────────────────────────
+  const completeCheckRow = buildRow();
+
+  const completeCheckLabel = document.createElement('label');
+  completeCheckLabel.className = 'settings-panel__label';
+  completeCheckLabel.textContent = t('settings.completeCheck');
+
+  const completeCheckCheckbox = document.createElement('input');
+  completeCheckCheckbox.type = 'checkbox';
+  completeCheckCheckbox.className = 'settings-panel__checkbox';
+  completeCheckCheckbox.checked = settings.showCompleteCheck;
+  completeCheckCheckbox.addEventListener('change', () => {
+    updateSettings({ showCompleteCheck: completeCheckCheckbox.checked });
+    emit('settings-changed');
+  });
+
+  completeCheckLabel.prepend(completeCheckCheckbox);
+  completeCheckRow.appendChild(completeCheckLabel);
+  _container.appendChild(completeCheckRow);
 
   // ── Size indicators ─────────────────────────────────────────────────────────
   const indicatorsRow = buildRow();

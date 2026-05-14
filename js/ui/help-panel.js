@@ -46,6 +46,8 @@ const HELP_CONTENT = {
     { type: 'paragraph', key: 'color.body' },
     { type: 'heading', key: 'percentage.heading' },
     { type: 'paragraph', key: 'percentage.body' },
+    { type: 'heading', key: 'completeCheck.heading' },
+    { type: 'paragraph', key: 'completeCheck.body' },
     { type: 'heading', key: 'sizeIndicators.heading' },
     { type: 'paragraph', key: 'sizeIndicators.body' },
     { type: 'paragraph', key: 'sizeIndicators.examplesIntro' },

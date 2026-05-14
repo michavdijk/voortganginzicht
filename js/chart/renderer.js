@@ -57,7 +57,7 @@ const ACTUAL_SPENDING_OVERRUN_LABEL_CHAR_WIDTH = 6.2;
  *
  * @param {HTMLElement} container
  * @param {import('../model/tree.js').Knoop} root
- * @param {{ showPercentage: boolean, showLegend?: boolean, colorScheme: string, customColor?: string, showActualSpending?: boolean, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }>, chartZoom?: number }} settings
+ * @param {{ showPercentage: boolean, showCompleteCheck?: boolean, showLegend?: boolean, colorScheme: string, customColor?: string, showActualSpending?: boolean, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }>, chartZoom?: number }} settings
  */
 export function renderChart(container, root, settings = { showPercentage: true, colorScheme: 'blauw' }) {
   // Measure available width via a cascade of fallbacks.
@@ -76,6 +76,7 @@ export function renderChart(container, root, settings = { showPercentage: true, 
   container.innerHTML = `<div class="chart-loading">${t('chart.calculating')}</div>`;
 
   const palette = getColorPalette(settings);
+  const showCompleteCheck = Boolean(settings.showCompleteCheck);
   const activeSizeIndicators = settings.showSizeIndicators
     ? normalizeSizeIndicators(settings.sizeIndicators)
     : [];
@@ -109,7 +110,7 @@ export function renderChart(container, root, settings = { showPercentage: true, 
     svg.appendChild(buildConnector(conn));
   }
   for (const box of boxes) {
-    svg.appendChild(buildBox(box, palette, settings.showPercentage, Boolean(settings.showActualSpending)));
+    svg.appendChild(buildBox(box, palette, settings.showPercentage, showCompleteCheck, Boolean(settings.showActualSpending)));
   }
   if (sizeGuide) {
     svg.appendChild(buildSizeGuide(sizeGuide));
@@ -117,7 +118,7 @@ export function renderChart(container, root, settings = { showPercentage: true, 
 
   // Add legend if enabled.
   const legendWidth = 168;
-  const showCompleteLegendRow = boxes.some(box => canRenderCompleteIndicator(box));
+  const showCompleteLegendRow = showCompleteCheck && boxes.some(box => canRenderCompleteIndicator(box));
   const showActualSpendingLegendRow = Boolean(settings.showActualSpending) &&
     boxes.some(box => canRenderActualSpendingMarker(box, Boolean(settings.showPercentage)));
   const legendRows = 1 + (showCompleteLegendRow ? 1 : 0) + (showActualSpendingLegendRow ? 1 : 0);
@@ -209,10 +210,11 @@ function canRenderCompleteIndicator(box) {
  * @param {import('./layout.js').BoxDescriptor} box
  * @param {{ fill: string, bg: string, border: string, text?: string }} palette
  * @param {boolean} showPercentage
+ * @param {boolean} showCompleteCheck
  * @param {boolean} showActualSpending
  * @returns {SVGGElement}
  */
-function buildBox(box, palette, showPercentage, showActualSpending) {
+function buildBox(box, palette, showPercentage, showCompleteCheck, showActualSpending) {
   const { x, y, width, height, progress, node } = box;
   const g           = createEl('g');
   const titleHeight = height - PROGRESS_BAR_HEIGHT;
@@ -259,7 +261,7 @@ function buildBox(box, palette, showPercentage, showActualSpending) {
     width,
     titleHeight,
     clipId,
-    isComplete: progress >= 99.999,
+    isComplete: showCompleteCheck && progress >= 99.999,
   });
   if (completeIndicator) g.appendChild(completeIndicator);
 
