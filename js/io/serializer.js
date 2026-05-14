@@ -43,7 +43,7 @@ const SUPPORTED_VERSIONS = new Set(['1', '2']);
 
 const DEFAULT_SETTINGS = {
   showPercentage: true,
-  showLegend: true,
+  showLegend: false,
   colorScheme: 'blauw',
   customColor: DEFAULT_CUSTOM_COLOR,
   showActualSpending: false,

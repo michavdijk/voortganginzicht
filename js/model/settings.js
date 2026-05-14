@@ -37,7 +37,7 @@ const MIN_TEXT_CONTRAST_ON_WHITE = 3;
 /** @type {Settings} */
 const DEFAULT_SETTINGS = {
   showPercentage: true,
-  showLegend: true,
+  showLegend: false,
   colorScheme: DEFAULT_COLOR_SCHEME,
   customColor: DEFAULT_CUSTOM_COLOR,
   showActualSpending: false,

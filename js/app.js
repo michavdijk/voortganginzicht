@@ -241,6 +241,11 @@ function initChartZoomControls() {
   updateChartZoomControls();
 }
 
+function resetChartZoom() {
+  _chartZoom = 1;
+  updateChartZoomControls();
+}
+
 function setChartZoomByStep(direction) {
   const currentIndex = chartZoomIndex();
   const nextIndex = Math.min(
@@ -275,14 +280,22 @@ function updateChartZoomControls() {
   const group = document.querySelector('.chart-zoom-controls');
   const zoomOutBtn = document.getElementById('chart-zoom-out');
   const zoomInBtn  = document.getElementById('chart-zoom-in');
+  const zoomLevelEl = document.getElementById('chart-zoom-level');
   if (!zoomOutBtn || !zoomInBtn) return;
 
   const chartBody = document.querySelector('#chart-panel .panel__body');
   const hasChart = Boolean(chartBody?._chartSvg);
   const currentIndex = chartZoomIndex();
   const zoomPercent = Math.round(_chartZoom * 100);
+  const zoomText = `${zoomPercent}%`;
 
   if (group) group.setAttribute('aria-label', t('chart.zoom.controls'));
+  if (zoomLevelEl) {
+    zoomLevelEl.textContent = zoomText;
+    const zoomLevelLabel = t('chart.zoom.level', { value: zoomText });
+    zoomLevelEl.title = zoomLevelLabel;
+    zoomLevelEl.setAttribute('aria-label', zoomLevelLabel);
+  }
 
   const zoomOutLabel = t('chart.zoom.out');
   zoomOutBtn.title = `${zoomOutLabel} (${zoomPercent}%)`;
@@ -405,6 +418,7 @@ async function handleNewProject() {
 
   const trimmedName = projectName.trim();
 
+  resetChartZoom();
   resetSettings();
   refreshSettingsPanel();
   newProject();
@@ -432,6 +446,7 @@ async function handleLoad() {
   }
 
   setRoot(result.root);
+  resetChartZoom();
   updateSettings(result.settings);
   refreshSettingsPanel();
   setProjectName(result.projectnaam || '');

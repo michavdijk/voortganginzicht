@@ -120,7 +120,7 @@ export function renderChart(container, root, settings = { showPercentage: true, 
   const legendHeight = showActualSpendingLegendRow ? 92 : 60;
   let extendedTotalHeight = totalHeight;
 
-  if (settings.showLegend !== false) {
+  if (settings.showLegend === true) {
     const contentRight = boxes.length > 0 ? Math.max(...boxes.map(b => b.x + b.width)) : totalWidth - 16;
     const legendX = Math.max(contentRight - legendWidth, 16);
     const legendY = sizeIndicators.length > 0

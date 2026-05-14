@@ -1385,7 +1385,7 @@
       }));
 
       assert(result.valid === true);
-      assert(result.settings.showLegend === true);
+      assert(result.settings.showLegend === false);
       assert(result.settings.showActualSpending === false);
       assert(result.settings.showSizeIndicators === false);
       assert(typeof result.settings.customColor === 'string');
@@ -1427,7 +1427,7 @@
     test('resetSettings restores all defaults', () => {
       updateSettings({
         showPercentage: false,
-        showLegend: false,
+        showLegend: true,
         colorScheme: CUSTOM_COLOR_SCHEME,
         customColor: '#FFFF00',
         showActualSpending: true,
@@ -1439,7 +1439,7 @@
       const settings = getSettings();
 
       assert(settings.showPercentage === true);
-      assert(settings.showLegend === true);
+      assert(settings.showLegend === false);
       assert(settings.colorScheme === 'blauw');
       assert(settings.customColor === '#2563EB');
       assert(settings.showActualSpending === false);
@@ -1475,11 +1475,11 @@
 
     test('settings store the legend toggle', () => {
       resetSettings();
-      updateSettings({ showLegend: false });
-      assert(getSettings().showLegend === false);
-
       updateSettings({ showLegend: true });
       assert(getSettings().showLegend === true);
+
+      updateSettings({ showLegend: false });
+      assert(getSettings().showLegend === false);
     });
 
     test('custom color palette derives background and readable text colors', () => {
