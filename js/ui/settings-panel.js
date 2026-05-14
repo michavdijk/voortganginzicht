@@ -5,7 +5,7 @@
  * – "Percentage opnemen in output" checkbox
  * – "Vinkje bij voltooid tonen" checkbox
  * – "Legenda tonen" checkbox
- * – "Actuele besteding tonen" checkbox
+ * – "Werkelijke besteding tonen" checkbox
  * – "Kleurenschema" dropdown
  * – optional size indicators
  *
@@ -47,6 +47,12 @@ function render() {
   _container.className = 'settings-panel';
   const settings = getSettings();
 
+  const displaySection = buildSection('settings.group.display');
+  const sizeSection = buildSection('settings.group.size');
+  const actualSpendingSection = buildSection(
+    'settings.group.actualSpending',
+    'settings.group.actualSpending.description'
+  );
 
   // ── Colour scheme dropdown ───────────────────────────────────────────────────
   const colorGroup = buildRow();
@@ -85,12 +91,7 @@ function render() {
     colorGroup.appendChild(buildCustomColorControl(settings));
   }
 
-  _container.appendChild(colorGroup);
-
-  // - Divider  ────────────────────────────────────────────────────────
-  const divider = document.createElement('p');
-    divider.className = 'settings-panel__divider';
-  _container.appendChild(divider);
+  displaySection.appendChild(colorGroup);
 
   // ── Percentage toggle ────────────────────────────────────────────────────────
   const percentageRow = buildRow();
@@ -110,7 +111,7 @@ function render() {
 
   pctLabel.prepend(pctCheckbox);
   percentageRow.appendChild(pctLabel);
-  _container.appendChild(percentageRow);
+  displaySection.appendChild(percentageRow);
 
   // ── Complete check toggle ──────────────────────────────────────────────────
   const completeCheckRow = buildRow();
@@ -130,7 +131,29 @@ function render() {
 
   completeCheckLabel.prepend(completeCheckCheckbox);
   completeCheckRow.appendChild(completeCheckLabel);
-  _container.appendChild(completeCheckRow);
+  displaySection.appendChild(completeCheckRow);
+
+  // ── Legend toggle ────────────────────────────────────────────────────────────
+  const legendRow = buildRow();
+
+  const legendLabel = document.createElement('label');
+  legendLabel.className = 'settings-panel__label';
+  legendLabel.textContent = t('settings.legend');
+
+  const legendCheckbox = document.createElement('input');
+  legendCheckbox.type = 'checkbox';
+  legendCheckbox.className = 'settings-panel__checkbox';
+  legendCheckbox.checked = settings.showLegend;
+  legendCheckbox.addEventListener('change', () => {
+    updateSettings({ showLegend: legendCheckbox.checked });
+    emit('settings-changed');
+  });
+
+  legendLabel.prepend(legendCheckbox);
+  legendRow.appendChild(legendLabel);
+  displaySection.appendChild(legendRow);
+
+  _container.appendChild(displaySection);
 
   // ── Size indicators ─────────────────────────────────────────────────────────
   const indicatorsRow = buildRow();
@@ -161,9 +184,10 @@ function render() {
     indicatorsRow.appendChild(buildSizeIndicatorList(settings.sizeIndicators));
   }
 
-  _container.appendChild(indicatorsRow);
+  sizeSection.appendChild(indicatorsRow);
+  _container.appendChild(sizeSection);
 
-   // ── Actual spending toggle ─────────────────────────────────────────────────
+  // ── Actual spending toggle ─────────────────────────────────────────────────
   const actualSpendingRow = buildRow();
 
   const actualSpendingLabel = document.createElement('label');
@@ -174,36 +198,44 @@ function render() {
   actualSpendingCheckbox.type = 'checkbox';
   actualSpendingCheckbox.className = 'settings-panel__checkbox';
   actualSpendingCheckbox.checked = settings.showActualSpending;
-  actualSpendingCheckbox.addEventListener('change', () => {
-    updateSettings({ showActualSpending: actualSpendingCheckbox.checked });
-    emit('settings-changed');
-  });
 
   actualSpendingLabel.prepend(actualSpendingCheckbox);
   actualSpendingRow.appendChild(actualSpendingLabel);
-  _container.appendChild(actualSpendingRow);
+  actualSpendingSection.appendChild(actualSpendingRow);
 
-  // ── Legend toggle ────────────────────────────────────────────────────────────
-  const legendRow = buildRow();
+  const actualSpendingNote = document.createElement('p');
+  actualSpendingNote.className = 'settings-panel__setting-note';
+  actualSpendingNote.setAttribute('role', 'status');
+  actualSpendingNote.textContent = t('settings.actualSpending.enabledNote');
+  actualSpendingNote.hidden = !settings.showActualSpending;
+  actualSpendingSection.appendChild(actualSpendingNote);
 
-  const legendLabel = document.createElement('label');
-  legendLabel.className = 'settings-panel__label';
-  legendLabel.textContent = t('settings.legend');
-
-  const legendCheckbox = document.createElement('input');
-  legendCheckbox.type = 'checkbox';
-  legendCheckbox.className = 'settings-panel__checkbox';
-  legendCheckbox.checked = settings.showLegend;
-  legendCheckbox.addEventListener('change', () => {
-    updateSettings({ showLegend: legendCheckbox.checked });
+  actualSpendingCheckbox.addEventListener('change', () => {
+    updateSettings({ showActualSpending: actualSpendingCheckbox.checked });
+    actualSpendingNote.hidden = !actualSpendingCheckbox.checked;
     emit('settings-changed');
   });
 
-  legendLabel.prepend(legendCheckbox);
-  legendRow.appendChild(legendLabel);
-  _container.appendChild(legendRow);
+  _container.appendChild(actualSpendingSection);
+}
 
+function buildSection(titleKey, descriptionKey = null) {
+  const section = document.createElement('section');
+  section.className = 'settings-panel__section';
 
+  const title = document.createElement('h3');
+  title.className = 'settings-panel__section-title';
+  title.textContent = t(titleKey);
+  section.appendChild(title);
+
+  if (descriptionKey) {
+    const description = document.createElement('p');
+    description.className = 'settings-panel__section-description';
+    description.textContent = t(descriptionKey);
+    section.appendChild(description);
+  }
+
+  return section;
 }
 
 function buildRow() {

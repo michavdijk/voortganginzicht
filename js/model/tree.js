@@ -230,7 +230,7 @@ export function setOmvang(node, value) {
 }
 
 /**
- * Set the actuele besteding of a node. Only valid on Activiteiten.
+ * Set the werkelijke besteding of a node. Only valid on Activiteiten.
  *
  * @param {Knoop} node
  * @param {string | number} value

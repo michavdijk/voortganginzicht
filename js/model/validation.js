@@ -45,7 +45,7 @@ export function validateOmvang(value) {
 }
 
 /**
- * Validate an actuele besteding value: must be an integer >= 0.
+ * Validate a werkelijke besteding value: must be an integer >= 0.
  * Accepts numbers or numeric strings.
  * @param {string | number} value
  * @returns {{ valid: boolean, error: string | null }}

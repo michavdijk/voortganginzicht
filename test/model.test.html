@@ -456,7 +456,7 @@
       addChild(act, 'Subtaak');
 
       assert(act.omvang === null, 'omvang should be cleared when Activiteit becomes Subdoel');
-      assert(act.actueleBesteding === null, 'actuele besteding should be cleared when Activiteit becomes Subdoel');
+      assert(act.actueleBesteding === null, 'werkelijke besteding should be cleared when Activiteit becomes Subdoel');
       assert(act.voortgangspercentage === null, 'voortgang should be reset when Activiteit becomes Subdoel');
     }, 'SC-004');
 
@@ -585,7 +585,7 @@
       // After last child removed, parent becomes Activiteit — fields stay cleared
       assert(getType(parent) === 'Activiteit');
       assert(parent.omvang === null, 'omvang should remain null after demotion');
-      assert(parent.actueleBesteding === null, 'actuele besteding should remain null after demotion');
+      assert(parent.actueleBesteding === null, 'werkelijke besteding should remain null after demotion');
       assert(parent.voortgangspercentage === null, 'voortgang should remain null after demotion');
     }, 'EC-5');
 
@@ -782,7 +782,7 @@
       assert(b.parent === a);
       assert(getType(a) === 'Subdoel', 'A should become Subdoel');
       assert(a.omvang === null, 'A should lose Activiteit-only omvang');
-      assert(a.actueleBesteding === null, 'A should lose Activiteit-only actuele besteding');
+      assert(a.actueleBesteding === null, 'A should lose Activiteit-only werkelijke besteding');
       assert(a.voortgangspercentage === null, 'A should lose Activiteit-only voortgang');
       assert(events.length === 1 && events[0].action === 'moveLevelDown');
       events._cleanup();
@@ -883,7 +883,7 @@
       assertThrows(() => setOmvang(act, 1.5));
     });
 
-    test('setActueleBesteding sets actuele besteding on an Activiteit', () => {
+    test('setActueleBesteding sets werkelijke besteding on an Activiteit', () => {
       const root = makeRoot();
       const act = addChild(root, 'Taak');
 
@@ -1183,6 +1183,11 @@
       assert(legend.getAttribute('data-complete-legend-row') === 'false');
       assert(legend.getAttribute('data-actual-spending-legend-row') === 'true');
       assert(legend.querySelector('[data-actual-spending-legend-label="true"]') !== null);
+      const svg = container.querySelector('svg');
+      const viewBoxWidth = Number(svg.getAttribute('viewBox').split(' ')[2]);
+      const legendBackground = legend.querySelector('rect');
+      const legendRight = Number(legendBackground.getAttribute('x')) + Number(legendBackground.getAttribute('width'));
+      assert(legendRight <= viewBoxWidth, 'Legend should fit inside the SVG viewBox');
 
       document.body.removeChild(container);
     });

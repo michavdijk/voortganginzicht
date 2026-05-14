@@ -1239,7 +1239,48 @@ ul.tree__children {
 .settings-panel {
   display: flex;
   flex-direction: column;
+  gap: 12px;
+}
+
+.settings-panel__section {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.settings-panel__section:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.settings-panel__section-title {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.settings-panel__section-description {
+  margin: -2px 0 2px;
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+  font-style: italic;
+  line-height: 1.35;
+}
+
+.settings-panel__setting-note {
+  margin: -2px 0 0 20px;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.settings-panel__setting-note[hidden] {
+  display: none;
 }
 
 .settings-panel__row {
@@ -1248,14 +1289,6 @@ ul.tree__children {
   justify-content: space-between;
   gap: 8px;
 }
-
-.settings-panel__divider {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-
 
 .settings-panel__row--stacked {
   align-items: stretch;

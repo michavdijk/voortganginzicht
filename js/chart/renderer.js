@@ -117,12 +117,13 @@ export function renderChart(container, root, settings = { showPercentage: true, 
   }
 
   // Add legend if enabled.
-  const legendWidth = 168;
+  const legendWidth = 232;
   const showCompleteLegendRow = showCompleteCheck && boxes.some(box => canRenderCompleteIndicator(box));
   const showActualSpendingLegendRow = Boolean(settings.showActualSpending) &&
     boxes.some(box => canRenderActualSpendingMarker(box, Boolean(settings.showPercentage)));
   const legendRows = 1 + (showCompleteLegendRow ? 1 : 0) + (showActualSpendingLegendRow ? 1 : 0);
   const legendHeight = 36 + legendRows * 24;
+  let extendedTotalWidth = totalWidth;
   let extendedTotalHeight = totalHeight;
 
   if (settings.showLegend === true) {
@@ -138,6 +139,10 @@ export function renderChart(container, root, settings = { showPercentage: true, 
     if (legendBottom > extendedTotalHeight) {
       extendedTotalHeight = legendBottom;
     }
+    const legendRight = legendX + legendWidth + 16;
+    if (legendRight > extendedTotalWidth) {
+      extendedTotalWidth = legendRight;
+    }
 
     svg.appendChild(buildLegend(legendX, legendY, legendWidth, legendHeight, palette, {
       showComplete: showCompleteLegendRow,
@@ -145,7 +150,8 @@ export function renderChart(container, root, settings = { showPercentage: true, 
     }));
   }
 
-  svg.setAttribute('viewBox', `0 0 ${totalWidth} ${extendedTotalHeight}`);
+  svg.setAttribute('viewBox', `0 0 ${extendedTotalWidth} ${extendedTotalHeight}`);
+  svg.setAttribute('width', String(extendedTotalWidth));
   svg.setAttribute('height', String(extendedTotalHeight));
 
   container._chartSvg = svg;
