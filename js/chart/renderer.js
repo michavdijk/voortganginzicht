@@ -117,7 +117,7 @@ export function renderChart(container, root, settings = { showPercentage: true, 
   }
 
   // Add legend if enabled.
-  const legendWidth = 232;
+  const legendWidth = 180;
   const showCompleteLegendRow = showCompleteCheck && boxes.some(box => canRenderCompleteIndicator(box));
   const showActualSpendingLegendRow = Boolean(settings.showActualSpending) &&
     boxes.some(box => canRenderActualSpendingMarker(box, Boolean(settings.showPercentage)));
@@ -130,7 +130,7 @@ export function renderChart(container, root, settings = { showPercentage: true, 
     const contentRight = boxes.length > 0 ? Math.max(...boxes.map(b => b.x + b.width)) : totalWidth - 16;
     const legendX = Math.max(contentRight - legendWidth, 16);
     const legendY = sizeIndicators.length > 0
-      ? chartBottom + 16
+      ? chartBottom + 24
       : sizeGuide
         ? sizeGuide.y + SIZE_GUIDE_HEIGHT + 8
         : totalHeight - legendHeight - 16;
