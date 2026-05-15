@@ -298,6 +298,7 @@ function updateHelpTriggerLabel(trigger) {
 
 function ensureHelpTriggerIcon(trigger) {
   if (!(trigger instanceof HTMLElement)) return;
+  if (!trigger.classList.contains('help-trigger')) return;
   if (trigger.querySelector('.help-trigger__icon')) return;
   trigger.textContent = '';
   trigger.appendChild(buildHelpIcon());

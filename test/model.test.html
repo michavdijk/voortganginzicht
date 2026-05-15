@@ -55,6 +55,8 @@
     import { getRoot, setRoot, isDirty, markClean, newProject } from '../js/model/project.js';
     import { CUSTOM_COLOR_SCHEME, getColorPalette, getSettings, updateSettings, resetSettings, normalizeSizeIndicators } from '../js/model/settings.js';
     import { computeLayout, FIXED_WIDTH, TEXT_H_PADDING, wrapTextToWidth } from '../js/chart/layout.js';
+    import { calcEffectiveActualSpending } from '../js/chart/progress-calc.js';
+    import { canRenderChart, getChartRenderIssue } from '../js/chart/render-validation.js';
     import { renderChart } from '../js/chart/renderer.js';
     import { serialize, deserialize } from '../js/io/serializer.js';
 
@@ -1291,7 +1293,10 @@
         colorScheme: 'blauw',
         showActualSpending: true,
       });
-      assert(container.querySelector('[data-actual-spending-marker="true"]') === null);
+      let zeroMarker = container.querySelector('[data-actual-spending-marker="true"]');
+      assert(zeroMarker !== null, 'Expected empty actual spending to render as zero');
+      assert(zeroMarker.getAttribute('data-actual-spending-value') === '0');
+      assert(zeroMarker.getAttribute('data-actual-spending-percentage') === '0');
 
       act.actueleBesteding = 0;
       renderChart(container, root, {
@@ -1299,12 +1304,15 @@
         colorScheme: 'blauw',
         showActualSpending: true,
       });
-      assert(container.querySelector('[data-actual-spending-marker="true"]') === null);
+      zeroMarker = container.querySelector('[data-actual-spending-marker="true"]');
+      assert(zeroMarker !== null, 'Expected explicit zero actual spending marker');
+      assert(zeroMarker.getAttribute('data-actual-spending-value') === '0');
+      assert(zeroMarker.getAttribute('data-actual-spending-percentage') === '0');
 
       document.body.removeChild(container);
     });
 
-    test('chart renderer shows actual spending only on activities', () => {
+    test('chart renderer rolls actual spending up to subgoals and goal', () => {
       const root = makeRoot('Project');
       const sub = addChild(root, 'Subdoel');
       const actA = addChild(sub, 'Activiteit A');
@@ -1318,6 +1326,9 @@
       setOmvang(directAct, 10);
       setActueleBesteding(directAct, 1);
 
+      assert(calcEffectiveActualSpending(sub) === 5, 'Subdoel actual spending should be summed from activities');
+      assert(calcEffectiveActualSpending(root) === 6, 'Goal actual spending should be summed from activities');
+
       const container = document.createElement('div');
       container.style.width = '800px';
       document.body.appendChild(container);
@@ -1329,12 +1340,67 @@
       });
 
       const markers = Array.from(container.querySelectorAll('[data-actual-spending-marker="true"]'));
-      assert(markers.length === 3, 'Expected markers only for the three activities');
+      assert(markers.length === 5, 'Expected markers for three activities, one subgoal, and one goal');
 
       const markerValues = markers.map(marker => marker.getAttribute('data-actual-spending-value')).sort().join(',');
-      assert(markerValues === '1,2,3', 'Expected only activity actual spending values');
-      assert(markers.every(marker => marker.getAttribute('data-actual-spending-value') !== '5'), 'Subdoel aggregate actual spending should not be rendered');
-      assert(markers.every(marker => marker.getAttribute('data-actual-spending-value') !== '6'), 'Goal aggregate actual spending should not be rendered');
+      assert(markerValues === '1,2,3,5,6', 'Expected activity and aggregate actual spending values');
+
+      const subMarker = markers.find(marker => marker.getAttribute('data-actual-spending-value') === '5');
+      assert(subMarker !== undefined, 'Expected subgoal aggregate actual spending marker');
+      assert(subMarker.getAttribute('data-actual-spending-percentage') === '50');
+
+      const goalMarker = markers.find(marker => marker.getAttribute('data-actual-spending-value') === '6');
+      assert(goalMarker !== undefined, 'Expected goal aggregate actual spending marker');
+      assert(goalMarker.getAttribute('data-actual-spending-percentage') === '30');
+
+      document.body.removeChild(container);
+    });
+
+    test('chart render validation allows empty actual spending values', () => {
+      const root = makeRoot('Project');
+      const actA = addChild(root, 'Activiteit A');
+      const actB = addChild(root, 'Activiteit B');
+
+      setOmvang(actA, 5);
+      setActueleBesteding(actA, 0);
+      setOmvang(actB, 7);
+
+      assert(actA.actueleBesteding === 0, 'Activity actual spending may be explicitly set to 0');
+      assert(canRenderChart(root) === true, 'Missing actual spending should not block the chart');
+      assert(getChartRenderIssue(root) === null);
+
+      setActueleBesteding(actB, 0);
+      assert(canRenderChart(root) === true, 'Explicit 0 actual spending should satisfy the validation');
+    });
+
+    test('actual spending aggregation treats empty values as visible zero', () => {
+      const root = makeRoot('Project');
+      const sub = addChild(root, 'Subdoel');
+      const actA = addChild(sub, 'Activiteit A');
+      const actB = addChild(sub, 'Activiteit B');
+
+      setOmvang(actA, 5);
+      setActueleBesteding(actA, 4);
+      setOmvang(actB, 5);
+
+      assert(calcEffectiveActualSpending(actB) === 0, 'Empty activity actual spending should count as zero');
+      assert(calcEffectiveActualSpending(sub) === 4, 'Subdoel actual spending should include empty child activity as zero');
+      assert(calcEffectiveActualSpending(root) === 4, 'Goal actual spending should include empty descendant activity as zero');
+
+      const container = document.createElement('div');
+      container.style.width = '800px';
+      document.body.appendChild(container);
+
+      renderChart(container, root, {
+        showPercentage: false,
+        colorScheme: 'blauw',
+        showActualSpending: true,
+      });
+
+      const markers = Array.from(container.querySelectorAll('[data-actual-spending-marker="true"]'));
+      assert(markers.length === 4, 'Expected markers for both activities, subgoal, and goal');
+      const markerValues = markers.map(marker => marker.getAttribute('data-actual-spending-value')).sort().join(',');
+      assert(markerValues === '0,4,4,4', 'Expected empty activity to render as visible zero and branches to aggregate it');
 
       document.body.removeChild(container);
     });

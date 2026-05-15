@@ -21,6 +21,7 @@ import {
   FONT_FAMILY,
   SIZE_GUIDE_HEIGHT,
 } from './layout.js';
+import { calcEffectiveActualSpending, calcEffectiveOmvang } from './progress-calc.js';
 import { getColorPalette, normalizeSizeIndicators } from '../model/settings.js';
 import { t } from '../i18n.js';
 
@@ -175,17 +176,15 @@ function normalizeChartZoom(value) {
 
 function canRenderActualSpendingMarker(box, showPercentage) {
   const { node, width } = box;
-  const isActivity = node.parent !== null && node.kinderen.length === 0;
-  const actualSpending = node.actueleBesteding;
-  const omvang = node.omvang;
+  const actualSpending = calcEffectiveActualSpending(node);
+  const omvang = calcEffectiveOmvang(node);
   const pctReserve = showPercentage ? PROGRESS_LABEL_WIDTH + PROGRESS_LABEL_GAP : 0;
   const trackWidth = Math.max(0, width - 2 * TEXT_H_PADDING - pctReserve);
 
   return (
-    isActivity &&
     Number.isFinite(actualSpending) &&
     Number.isFinite(omvang) &&
-    actualSpending >= 1 &&
+    actualSpending >= 0 &&
     omvang >= 1 &&
     trackWidth > 0
   );
@@ -226,7 +225,8 @@ function buildBox(box, palette, showPercentage, showCompleteCheck, showActualSpe
   const titleHeight = height - PROGRESS_BAR_HEIGHT;
   const barY        = y + titleHeight;
   const isBranch    = node.kinderen.length > 0;
-  const isActivity  = node.parent !== null && node.kinderen.length === 0;
+  const effectiveOmvang = calcEffectiveOmvang(node);
+  const effectiveActualSpending = calcEffectiveActualSpending(node);
   const titleFill   = isBranch ? COLOR_WHITE : palette.bg;
   const borderColor = isBranch ? (palette.text ?? palette.fill) : palette.border;
   const titleColor  = isBranch ? (palette.text ?? palette.fill) : COLOR_TEXT_DARK;
@@ -257,8 +257,8 @@ function buildBox(box, palette, showPercentage, showCompleteCheck, showActualSpe
     palette,
     showPercentage,
     clipId,
-    actualSpending: showActualSpending && isActivity ? node.actueleBesteding : null,
-    omvang: node.omvang,
+    actualSpending: showActualSpending ? effectiveActualSpending : null,
+    omvang: effectiveOmvang,
   });
   const completeIndicator = buildCompleteIndicator({
     x,
@@ -426,7 +426,7 @@ function buildActualSpendingMarker({ actualSpending, omvang, trackX, trackY, tra
   if (
     !Number.isFinite(actualSpending) ||
     !Number.isFinite(omvang) ||
-    actualSpending < 1 ||
+    actualSpending < 0 ||
     omvang < 1 ||
     trackWidth <= 0
   ) {

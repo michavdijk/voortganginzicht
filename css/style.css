@@ -241,18 +241,16 @@ body {
 .app-header__brand {
   display: flex;
   align-items: center;
-  gap: 8px;
   padding: 10px 0;
-  flex: 0 1 380px;
+  flex: 0 1 340px;
   min-width: 180px;
 }
 
 .app-header__logo {
   display: block;
-  width: min(calc(100% - 32px), 340px);
+  width: min(100%, 340px);
   height: auto;
   max-height: 46px;
-  min-width: 0;
   object-fit: contain;
 }
 
@@ -334,22 +332,6 @@ body {
   flex-shrink: 0;
 }
 
-.app-header__utility {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding-left: 12px;
-  margin-left: 8px;
-  border-left: 1px solid var(--color-border);
-  flex-shrink: 0;
-}
-
-.app-header__help {
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-}
-
 @media (max-width: 900px) {
   .app-header {
     flex-wrap: wrap;
@@ -366,7 +348,7 @@ body {
   }
 
   .app-header__logo {
-    width: min(calc(100% - 32px), 300px);
+    width: min(100%, 300px);
     max-height: 40px;
   }
 
@@ -385,8 +367,11 @@ body {
   }
 
   .lang-switcher {
+    flex: 1 1 100%;
     justify-content: center;
+    margin-left: 0;
     padding: 4px 0;
+    border-left: none;
   }
 
 }
@@ -399,7 +384,9 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 0;
+  padding: 10px 0 10px 12px;
+  margin-left: 8px;
+  border-left: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
@@ -457,15 +444,6 @@ body {
 }
 
 @media (max-width: 900px) {
-  .app-header__utility {
-    flex: 1 1 100%;
-    justify-content: center;
-    gap: 10px;
-    padding: 4px 0;
-    margin-left: 0;
-    border-left: none;
-  }
-
   .lang-switcher {
     padding-top: 4px;
     padding-bottom: 4px;
@@ -508,8 +486,9 @@ body {
 
 .app-footer {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
+  gap: 16px;
   padding: 6px 16px;
   background: var(--color-surface);
   border-top: 1px solid var(--color-border);
@@ -520,6 +499,19 @@ body {
 
 .app-footer__copyright {
   justify-self: start;
+}
+
+.app-footer__help-link {
+  justify-self: center;
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.app-footer__help-link:hover,
+.app-footer__help-link:focus-visible {
+  color: var(--color-text);
 }
 
 .app-footer__version {

@@ -21,7 +21,7 @@ import { serialize, deserialize } from './io/serializer.js';
 import { saveToFile, loadFromFile, supportsSaveFilePicker, pickSaveFile, writeBlobToFileHandle, downloadBlob } from './io/file-access.js';
 import { on, emit } from './events.js';
 import { renderChart } from './chart/renderer.js';
-import { getType } from './model/tree.js';
+import { canRenderChart, formatChartRenderIssue, getChartRenderIssue } from './chart/render-validation.js';
 import { t } from './i18n.js';
 
 const PROJECT_NAME_MAX_LENGTH = 100;
@@ -180,9 +180,10 @@ function autoRender() {
   clearTimeout(_renderTimer);
   const root      = getRoot();
   const chartBody = document.querySelector('#chart-panel .panel__body');
+  const settings  = getSettings();
   if (!chartBody) return;
 
-  if (!root || !canRender(root)) {
+  if (!canRenderChart(root)) {
     chartBody.innerHTML = buildChartPlaceholder(root);
     chartBody._chartSvg = null;
     _lastRenderWidth = 0;
@@ -190,24 +191,10 @@ function autoRender() {
     return;
   }
 
-  renderChart(chartBody, root, { ...getSettings(), chartZoom: _chartZoom });
+  renderChart(chartBody, root, { ...settings, chartZoom: _chartZoom });
   _lastRenderWidth = chartBody.clientWidth;
   updateChartZoomControls();
   emit('chart-generated', root);
-}
-
-function canRender(root) {
-  return hasAnyActiviteit(root) && allActiviteitenHaveOmvang(root);
-}
-
-function hasAnyActiviteit(node) {
-  if (getType(node) === 'Activiteit') return true;
-  return node.kinderen.some(hasAnyActiviteit);
-}
-
-function allActiviteitenHaveOmvang(node) {
-  if (getType(node) === 'Activiteit') return node.omvang !== null;
-  return node.kinderen.every(allActiviteitenHaveOmvang);
 }
 
 function buildChartPlaceholder(root) {
@@ -215,17 +202,7 @@ function buildChartPlaceholder(root) {
 }
 
 function chartPlaceholderMessage(root) {
-  if (!root) return t('chart.placeholder.empty');
-  if (!hasAnyActiviteit(root)) return t('chart.placeholder.noActivities');
-
-  const missingCount = countActiviteitenWithoutOmvang(root);
-  if (missingCount === 1) return t('chart.placeholder.missingOmvang.one');
-  return t('chart.placeholder.missingOmvang.many', { count: missingCount });
-}
-
-function countActiviteitenWithoutOmvang(node) {
-  if (getType(node) === 'Activiteit') return node.omvang === null ? 1 : 0;
-  return node.kinderen.reduce((count, child) => count + countActiviteitenWithoutOmvang(child), 0);
+  return formatChartRenderIssue(getChartRenderIssue(root));
 }
 
 // ── Chart zoom controls ─────────────────────────────────────────────────────
@@ -642,6 +619,9 @@ function applyStaticTranslations() {
 
   const chartHeader = document.getElementById('chart-panel-header');
   if (chartHeader) chartHeader.textContent = t('panel.chart.header');
+
+  const footerHelpLink = document.getElementById('footer-help-link');
+  if (footerHelpLink) footerHelpLink.textContent = t('help.overview.nav');
 
   updateTreePanelToggleLabels();
   updateChartZoomControls();
