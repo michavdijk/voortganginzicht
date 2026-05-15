@@ -8,8 +8,9 @@
 import { on } from '../events.js';
 import { t } from '../i18n.js';
 
-const DEFAULT_SECTION = 'chart';
+const DEFAULT_SECTION = 'overview';
 const HELP_SECTIONS = [
+  'overview',
   'workStructure',
   'chart',
   'settings',
@@ -17,6 +18,15 @@ const HELP_SECTIONS = [
 ];
 
 const HELP_CONTENT = {
+  overview: [
+    { type: 'paragraph', key: 'intro' },
+    { type: 'heading', key: 'workflow.heading' },
+    { type: 'list', keys: ['workflow.structure', 'workflow.activities', 'workflow.report', 'workflow.settings'] },
+    { type: 'heading', key: 'concepts.heading' },
+    { type: 'list', keys: ['concepts.goal', 'concepts.subgoals', 'concepts.activities'] },
+    { type: 'paragraph', key: 'privacy' },
+    { type: 'paragraph', key: 'next' },
+  ],
   workStructure: [
     { type: 'paragraph', key: 'intro' },
     { type: 'list', keys: ['structure.goal', 'structure.subgoals', 'structure.activities'] },
