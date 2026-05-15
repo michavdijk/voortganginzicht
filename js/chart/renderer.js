@@ -21,7 +21,6 @@ import {
   FONT_FAMILY,
   SIZE_GUIDE_HEIGHT,
 } from './layout.js';
-import { calcEffectiveActualSpending, calcEffectiveOmvang } from './progress-calc.js';
 import { getColorPalette, normalizeSizeIndicators } from '../model/settings.js';
 import { t } from '../i18n.js';
 
@@ -176,13 +175,14 @@ function normalizeChartZoom(value) {
 
 function canRenderActualSpendingMarker(box, showPercentage) {
   const { node, width } = box;
-  const isBranch = node.kinderen.length > 0;
-  const actualSpending = isBranch ? calcEffectiveActualSpending(node) : node.actueleBesteding;
-  const omvang = isBranch ? calcEffectiveOmvang(node) : node.omvang;
+  const isActivity = node.parent !== null && node.kinderen.length === 0;
+  const actualSpending = node.actueleBesteding;
+  const omvang = node.omvang;
   const pctReserve = showPercentage ? PROGRESS_LABEL_WIDTH + PROGRESS_LABEL_GAP : 0;
   const trackWidth = Math.max(0, width - 2 * TEXT_H_PADDING - pctReserve);
 
   return (
+    isActivity &&
     Number.isFinite(actualSpending) &&
     Number.isFinite(omvang) &&
     actualSpending >= 1 &&
@@ -226,8 +226,7 @@ function buildBox(box, palette, showPercentage, showCompleteCheck, showActualSpe
   const titleHeight = height - PROGRESS_BAR_HEIGHT;
   const barY        = y + titleHeight;
   const isBranch    = node.kinderen.length > 0;
-  const effectiveOmvang = isBranch ? calcEffectiveOmvang(node) : node.omvang;
-  const effectiveActualSpending = isBranch ? calcEffectiveActualSpending(node) : node.actueleBesteding;
+  const isActivity  = node.parent !== null && node.kinderen.length === 0;
   const titleFill   = isBranch ? COLOR_WHITE : palette.bg;
   const borderColor = isBranch ? (palette.text ?? palette.fill) : palette.border;
   const titleColor  = isBranch ? (palette.text ?? palette.fill) : COLOR_TEXT_DARK;
@@ -258,8 +257,8 @@ function buildBox(box, palette, showPercentage, showCompleteCheck, showActualSpe
     palette,
     showPercentage,
     clipId,
-    actualSpending: showActualSpending ? effectiveActualSpending : null,
-    omvang: effectiveOmvang,
+    actualSpending: showActualSpending && isActivity ? node.actueleBesteding : null,
+    omvang: node.omvang,
   });
   const completeIndicator = buildCompleteIndicator({
     x,

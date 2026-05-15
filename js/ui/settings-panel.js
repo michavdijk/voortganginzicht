@@ -5,7 +5,7 @@
  * – "Percentage opnemen in output" checkbox
  * – "Vinkje bij voltooid tonen" checkbox
  * – "Legenda tonen" checkbox
- * – "Werkelijke besteding tonen" checkbox
+ * – "Werkelijke besteding bij activiteiten tonen" checkbox
  * – "Kleurenschema" dropdown
  * – optional size indicators
  *

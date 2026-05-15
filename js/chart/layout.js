@@ -9,7 +9,7 @@
  *   – Progress bar   (fixed PROGRESS_BAR_HEIGHT)
  */
 
-import { calcWeightedProgress, getAllActiviteiten, hasActualSpending } from './progress-calc.js';
+import { calcWeightedProgress, getAllActiviteiten } from './progress-calc.js';
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 
