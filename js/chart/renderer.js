@@ -40,7 +40,9 @@ const PROGRESS_TRACK_HEIGHT = 6;
 const PROGRESS_LABEL_WIDTH  = 30;
 const PROGRESS_LABEL_GAP    = 8;
 const COMPLETE_ICON_SIZE = 14;
-const ACTUAL_SPENDING_MARKER_HALF_WIDTH = 5;
+const ACTUAL_SPENDING_MARKER_STROKE_WIDTH = 2;
+const ACTUAL_SPENDING_MARKER_HALO_WIDTH = 4.5;
+const ACTUAL_SPENDING_MARKER_Y_OFFSET = 4;
 const ACTUAL_SPENDING_OVERRUN_LABEL_MIN_WIDTH = 42;
 const ACTUAL_SPENDING_OVERRUN_LABEL_GAP = 2;
 const ACTUAL_SPENDING_OVERRUN_LABEL_HEIGHT = 12;
@@ -172,6 +174,10 @@ function normalizeChartZoom(value) {
   const zoom = Number(value);
   if (!Number.isFinite(zoom) || zoom <= 0) return 1;
   return Math.min(2, Math.max(0.5, zoom));
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function canRenderActualSpendingMarker(box, showPercentage) {
@@ -437,15 +443,19 @@ function buildActualSpendingMarker({ actualSpending, omvang, trackX, trackY, tra
   const clamped = Math.min(actualSpending, omvang);
   const percentage = Math.round((actualSpending / omvang) * 100);
   const overrunPercentage = Math.round(((actualSpending - omvang) / omvang) * 100);
-  const markerX = trackX + (clamped / omvang) * trackWidth;
-  const tipY = trackY + PROGRESS_TRACK_HEIGHT + 2;
-  const topY = trackY - 5;
-  const markerHalfWidth = ACTUAL_SPENDING_MARKER_HALF_WIDTH;
+  const rawMarkerX = trackX + (clamped / omvang) * trackWidth;
+  const markerInset = Math.min(ACTUAL_SPENDING_MARKER_HALO_WIDTH / 2, trackWidth / 2);
+  const markerX = clamp(rawMarkerX, trackX + markerInset, trackX + trackWidth - markerInset);
+  const markerTopY = trackY - ACTUAL_SPENDING_MARKER_Y_OFFSET;
+  const markerBottomY = trackY + PROGRESS_TRACK_HEIGHT + ACTUAL_SPENDING_MARKER_Y_OFFSET;
   const markerColor = isOverrun ? COLOR_ACTUAL_SPENDING_OVERRUN : COLOR_ACTUAL_SPENDING;
 
   const marker = createEl('g');
   marker.setAttribute('clip-path', `url(#${clipId})`);
   marker.setAttribute('data-actual-spending-marker', 'true');
+  marker.setAttribute('data-actual-spending-marker-x', String(markerX));
+  marker.setAttribute('data-actual-spending-track-start', String(trackX));
+  marker.setAttribute('data-actual-spending-track-end', String(trackX + trackWidth));
   marker.setAttribute('data-actual-spending-value', String(actualSpending));
   marker.setAttribute('data-actual-spending-clamped', String(actualSpending > omvang));
   marker.setAttribute('data-actual-spending-overrun', String(isOverrun));
@@ -458,15 +468,30 @@ function buildActualSpendingMarker({ actualSpending, omvang, trackX, trackY, tra
     : t('chart.actualSpending.markerTitle', { value: actualSpending });
   marker.appendChild(title);
 
-  const triangle = createEl('path');
-  setAttrs(triangle, {
-    d: `M ${markerX} ${tipY} L ${markerX - markerHalfWidth} ${topY} L ${markerX + markerHalfWidth} ${topY} Z`,
-    fill: markerColor,
+  const halo = createEl('line');
+  setAttrs(halo, {
+    x1: markerX,
+    y1: markerTopY,
+    x2: markerX,
+    y2: markerBottomY,
     stroke: COLOR_WHITE,
-    'stroke-width': 1.5,
-    'stroke-linejoin': 'round',
+    'stroke-width': ACTUAL_SPENDING_MARKER_HALO_WIDTH,
+    'stroke-linecap': 'round',
   });
-  marker.appendChild(triangle);
+  marker.appendChild(halo);
+
+  const line = createEl('line');
+  line.setAttribute('data-actual-spending-marker-line', 'true');
+  setAttrs(line, {
+    x1: markerX,
+    y1: markerTopY,
+    x2: markerX,
+    y2: markerBottomY,
+    stroke: markerColor,
+    'stroke-width': ACTUAL_SPENDING_MARKER_STROKE_WIDTH,
+    'stroke-linecap': 'round',
+  });
+  marker.appendChild(line);
 
   if (isOverrun && trackWidth >= ACTUAL_SPENDING_OVERRUN_LABEL_MIN_WIDTH) {
     const labelText = `+${overrunPercentage}%`;
@@ -476,7 +501,7 @@ function buildActualSpendingMarker({ actualSpending, omvang, trackX, trackY, tra
       ACTUAL_SPENDING_OVERRUN_LABEL_H_PADDING
     );
     const labelRight = markerX;
-    const labelY = topY - ACTUAL_SPENDING_OVERRUN_LABEL_GAP - ACTUAL_SPENDING_OVERRUN_LABEL_HEIGHT;
+    const labelY = markerTopY - ACTUAL_SPENDING_OVERRUN_LABEL_GAP - ACTUAL_SPENDING_OVERRUN_LABEL_HEIGHT;
 
     const badge = createEl('rect');
     setAttrs(badge, {
@@ -637,17 +662,35 @@ function buildLegend(x, y, width, height, palette, { showComplete, showActualSpe
 
   if (showActualSpending) {
     const markerX = leftColumnX + barWidth / 2;
-    const markerTipY = rowY + 6;
     const markerTopY = rowY - 8;
-    const marker = createEl('path');
+    const markerBottomY = rowY + 8;
+    const marker = createEl('g');
     marker.setAttribute('data-actual-spending-legend-marker', 'true');
-    setAttrs(marker, {
-      d: `M ${markerX} ${markerTipY} L ${markerX - ACTUAL_SPENDING_MARKER_HALF_WIDTH} ${markerTopY} L ${markerX + ACTUAL_SPENDING_MARKER_HALF_WIDTH} ${markerTopY} Z`,
-      fill: COLOR_ACTUAL_SPENDING,
+
+    const halo = createEl('line');
+    setAttrs(halo, {
+      x1: markerX,
+      y1: markerTopY,
+      x2: markerX,
+      y2: markerBottomY,
       stroke: COLOR_WHITE,
-      'stroke-width': 1.5,
-      'stroke-linejoin': 'round',
+      'stroke-width': ACTUAL_SPENDING_MARKER_HALO_WIDTH,
+      'stroke-linecap': 'round',
     });
+    marker.appendChild(halo);
+
+    const line = createEl('line');
+    setAttrs(line, {
+      x1: markerX,
+      y1: markerTopY,
+      x2: markerX,
+      y2: markerBottomY,
+      stroke: COLOR_ACTUAL_SPENDING,
+      'stroke-width': ACTUAL_SPENDING_MARKER_STROKE_WIDTH,
+      'stroke-linecap': 'round',
+    });
+    marker.appendChild(line);
+
     g.appendChild(marker);
 
     const label = createEl('text');

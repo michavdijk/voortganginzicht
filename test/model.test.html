@@ -1282,6 +1282,10 @@
       assert(marker.getAttribute('data-actual-spending-overrun') === 'true');
       assert(marker.getAttribute('data-actual-spending-percentage') === '150');
       assert(marker.getAttribute('data-actual-spending-overrun-percentage') === '50');
+      const markerLine = marker.querySelector('[data-actual-spending-marker-line="true"]');
+      assert(markerLine !== null, 'Expected actual spending to render as a vertical line');
+      assert(markerLine.getAttribute('x1') === markerLine.getAttribute('x2'));
+      assert(Number(markerLine.getAttribute('y1')) < Number(markerLine.getAttribute('y2')));
       const overrunLabel = marker.querySelector('[data-actual-spending-overrun-label="true"]');
       assert(overrunLabel !== null, 'Expected overrun label');
       assert(overrunLabel.textContent === '+50%');
@@ -1297,6 +1301,9 @@
       assert(zeroMarker !== null, 'Expected empty actual spending to render as zero');
       assert(zeroMarker.getAttribute('data-actual-spending-value') === '0');
       assert(zeroMarker.getAttribute('data-actual-spending-percentage') === '0');
+      let zeroLine = zeroMarker.querySelector('[data-actual-spending-marker-line="true"]');
+      assert(zeroLine !== null, 'Expected zero actual spending to render as a vertical line');
+      assert(Number(zeroLine.getAttribute('x1')) >= Number(zeroMarker.getAttribute('data-actual-spending-track-start')));
 
       act.actueleBesteding = 0;
       renderChart(container, root, {
@@ -1308,6 +1315,9 @@
       assert(zeroMarker !== null, 'Expected explicit zero actual spending marker');
       assert(zeroMarker.getAttribute('data-actual-spending-value') === '0');
       assert(zeroMarker.getAttribute('data-actual-spending-percentage') === '0');
+      zeroLine = zeroMarker.querySelector('[data-actual-spending-marker-line="true"]');
+      assert(zeroLine !== null, 'Expected explicit zero actual spending to render as a vertical line');
+      assert(Number(zeroLine.getAttribute('x1')) >= Number(zeroMarker.getAttribute('data-actual-spending-track-start')));
 
       document.body.removeChild(container);
     });
