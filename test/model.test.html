@@ -1226,7 +1226,7 @@
 
       completeIndicators = container.querySelectorAll('[data-complete-indicator="true"]');
       assert(completeIndicators.length === 4, 'Expected complete indicators for both activities, subgoal, and goal');
-      assert(completeIndicators[0].querySelector('title')?.textContent === 'Klaar');
+      assert(completeIndicators[0].querySelector('title')?.textContent === 'Voltooid');
 
       setVoortgang(actB, 50);
       renderChart(container, root, {
@@ -1250,7 +1250,7 @@
       const legend = container.querySelector('[data-chart-legend="true"]');
       assert(legend !== null, 'Legend should be shown');
       assert(legend.getAttribute('data-complete-legend-row') === 'true');
-      assert(legend.querySelector('[data-complete-legend-label="true"]')?.textContent === 'Afgerond');
+      assert(legend.querySelector('[data-complete-legend-label="true"]')?.textContent === 'Voltooid');
 
       document.body.removeChild(container);
     });
