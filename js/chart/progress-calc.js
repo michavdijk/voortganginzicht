@@ -2,10 +2,19 @@
  * Weighted progress calculation module.
  *
  * Provides recursive calculation of weighted voortgang, effective omvang,
- * and effective actual spending for any node in the work-breakdown tree.
+ * effective actual spending and spending status for any node in the
+ * work-breakdown tree.
  */
 
 import { getType } from '../model/tree.js';
+
+export const PROJECT_SPENDING_STATUS = Object.freeze({
+  CONFORM: 'conform',
+  MORE: 'more',
+  LESS: 'less',
+});
+
+const PROJECT_STATUS_THRESHOLD = 0.1;
 
 /**
  * Calculate the weighted voortgangspercentage for a node.
@@ -75,6 +84,33 @@ export function calcEffectiveActualSpending(node) {
     total += calcEffectiveActualSpending(child);
   }
   return total;
+}
+
+/**
+ * Determine how actual spending compares with expected spending for a node.
+ *
+ * Expected spending is based on effective size and weighted progress:
+ *   expected = size * (progress / 100)
+ *
+ * @param {import('../model/tree.js').Knoop} node
+ * @returns {'conform' | 'more' | 'less'}
+ */
+export function calcProjectSpendingStatus(node) {
+  const plannedSize = calcEffectiveOmvang(node);
+  const progressFraction = calcWeightedProgress(node) / 100;
+  const expectedSpending = plannedSize * progressFraction;
+  const actualSpending = calcEffectiveActualSpending(node);
+
+  if (expectedSpending <= 0) {
+    return actualSpending > 0
+      ? PROJECT_SPENDING_STATUS.MORE
+      : PROJECT_SPENDING_STATUS.CONFORM;
+  }
+
+  const deviation = (actualSpending - expectedSpending) / expectedSpending;
+  if (deviation > PROJECT_STATUS_THRESHOLD) return PROJECT_SPENDING_STATUS.MORE;
+  if (deviation < -PROJECT_STATUS_THRESHOLD) return PROJECT_SPENDING_STATUS.LESS;
+  return PROJECT_SPENDING_STATUS.CONFORM;
 }
 
 /**

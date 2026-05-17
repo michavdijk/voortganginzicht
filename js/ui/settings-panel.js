@@ -6,6 +6,7 @@
  * – "Vinkje bij voltooid tonen" checkbox
  * – "Legenda tonen" checkbox
  * – "Werkelijke besteding tonen" checkbox
+ * – "Status project tonen" checkbox when actual spending is visible
  * – "Kleurenschema" dropdown
  * – optional size indicators
  *
@@ -210,10 +211,33 @@ function render() {
   actualSpendingNote.hidden = !settings.showActualSpending;
   actualSpendingSection.appendChild(actualSpendingNote);
 
+  if (settings.showActualSpending) {
+    const projectStatusRow = buildRow();
+    projectStatusRow.classList.add('settings-panel__row--nested');
+    projectStatusRow.dataset.settingProjectStatus = 'true';
+
+    const projectStatusLabel = document.createElement('label');
+    projectStatusLabel.className = 'settings-panel__label';
+    projectStatusLabel.textContent = t('settings.projectStatus');
+
+    const projectStatusCheckbox = document.createElement('input');
+    projectStatusCheckbox.type = 'checkbox';
+    projectStatusCheckbox.className = 'settings-panel__checkbox';
+    projectStatusCheckbox.checked = settings.showProjectStatus;
+    projectStatusCheckbox.addEventListener('change', () => {
+      updateSettings({ showProjectStatus: projectStatusCheckbox.checked });
+      emit('settings-changed');
+    });
+
+    projectStatusLabel.prepend(projectStatusCheckbox);
+    projectStatusRow.appendChild(projectStatusLabel);
+    actualSpendingSection.appendChild(projectStatusRow);
+  }
+
   actualSpendingCheckbox.addEventListener('change', () => {
     updateSettings({ showActualSpending: actualSpendingCheckbox.checked });
-    actualSpendingNote.hidden = !actualSpendingCheckbox.checked;
     emit('settings-changed');
+    render();
   });
 
   _container.appendChild(actualSpendingSection);

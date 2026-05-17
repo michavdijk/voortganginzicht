@@ -64,6 +64,7 @@ const HELP_CONTENT = {
     { type: 'paragraph', key: 'actualSpending.intro' },
     { type: 'paragraph', key: 'actualSpending.body' },
     { type: 'paragraph', key: 'actualSpending.report' },
+    { type: 'paragraph', key: 'actualSpending.status' },
   ],
   files: [
     { type: 'paragraph', key: 'intro' },

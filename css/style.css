@@ -1310,6 +1310,17 @@ ul.tree__children {
   gap: 6px;
 }
 
+.settings-panel__row--nested {
+  justify-content: flex-start;
+  margin-left: 20px;
+  padding-left: 10px;
+  border-left: 1px solid var(--color-border);
+}
+
+.settings-panel__row--nested .settings-panel__label {
+  color: var(--color-text-muted);
+}
+
 .settings-panel__label {
   display: flex;
   align-items: center;

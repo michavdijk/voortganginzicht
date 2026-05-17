@@ -21,7 +21,12 @@ import {
   FONT_FAMILY,
   SIZE_GUIDE_HEIGHT,
 } from './layout.js';
-import { calcEffectiveActualSpending, calcEffectiveOmvang } from './progress-calc.js';
+import {
+  PROJECT_SPENDING_STATUS,
+  calcEffectiveActualSpending,
+  calcEffectiveOmvang,
+  calcProjectSpendingStatus,
+} from './progress-calc.js';
 import { getColorPalette, normalizeSizeIndicators } from '../model/settings.js';
 import { t } from '../i18n.js';
 
@@ -36,6 +41,9 @@ const COLOR_ACTUAL_SPENDING = '#0F172A';
 const COLOR_ACTUAL_SPENDING_OVERRUN = '#DC2626';
 const COLOR_COMPLETE = '#16A34A';
 const COLOR_WHITE      = '#FFFFFF';
+const COLOR_PROJECT_STATUS_CONFORM = '#16A34A';
+const COLOR_PROJECT_STATUS_MORE    = '#EA580C';
+const COLOR_PROJECT_STATUS_LESS    = '#2563EB';
 const PROGRESS_TRACK_HEIGHT = 6;
 const PROGRESS_LABEL_WIDTH  = 30;
 const PROGRESS_LABEL_GAP    = 8;
@@ -49,6 +57,13 @@ const ACTUAL_SPENDING_OVERRUN_LABEL_HEIGHT = 12;
 const ACTUAL_SPENDING_OVERRUN_LABEL_H_PADDING = 4;
 const ACTUAL_SPENDING_OVERRUN_LABEL_LEFT_PADDING = 8;
 const ACTUAL_SPENDING_OVERRUN_LABEL_CHAR_WIDTH = 6.2;
+const PROJECT_STATUS_TOP_GAP = 10;
+const PROJECT_STATUS_DOT_RADIUS = 7;
+const PROJECT_STATUS_TEXT_GAP = 8;
+const PROJECT_STATUS_FONT_SIZE = 12;
+const PROJECT_STATUS_SUFFIX_FONT_SIZE = 10;
+const PROJECT_STATUS_SUFFIX_GAP = 2;
+const PROJECT_STATUS_CHAR_WIDTH = 6.3;
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -59,7 +74,7 @@ const ACTUAL_SPENDING_OVERRUN_LABEL_CHAR_WIDTH = 6.2;
  *
  * @param {HTMLElement} container
  * @param {import('../model/tree.js').Knoop} root
- * @param {{ showPercentage: boolean, showCompleteCheck?: boolean, showLegend?: boolean, colorScheme: string, customColor?: string, showActualSpending?: boolean, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }>, chartZoom?: number }} settings
+ * @param {{ showPercentage: boolean, showCompleteCheck?: boolean, showLegend?: boolean, colorScheme: string, customColor?: string, showActualSpending?: boolean, showProjectStatus?: boolean, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }>, chartZoom?: number }} settings
  */
 export function renderChart(container, root, settings = { showPercentage: true, colorScheme: 'blauw' }) {
   // Measure available width via a cascade of fallbacks.
@@ -90,6 +105,12 @@ export function renderChart(container, root, settings = { showPercentage: true, 
       hideSizeGuide: Boolean(settings.showSizeIndicators),
     }
   );
+  const projectStatus = settings.showActualSpending && settings.showProjectStatus
+    ? calcProjectSpendingStatus(root)
+    : null;
+  const projectStatusBox = projectStatus
+    ? boxes.find(box => box.node === root)
+    : null;
 
   const svg = createEl('svg');
   svg.setAttribute('xmlns',   SVG_NS);
@@ -150,6 +171,15 @@ export function renderChart(container, root, settings = { showPercentage: true, 
       showComplete: showCompleteLegendRow,
       showActualSpending: showActualSpendingLegendRow,
     }));
+  }
+
+  if (projectStatus && projectStatusBox) {
+    const statusIndicator = buildProjectStatus(projectStatus, root.id, projectStatusBox);
+    const statusBottom = Number(statusIndicator.getAttribute('data-project-status-bottom'));
+    if (Number.isFinite(statusBottom)) {
+      extendedTotalHeight = Math.max(extendedTotalHeight, statusBottom + 16);
+    }
+    svg.appendChild(statusIndicator);
   }
 
   svg.setAttribute('viewBox', `0 0 ${extendedTotalWidth} ${extendedTotalHeight}`);
@@ -531,6 +561,94 @@ function buildActualSpendingMarker({ actualSpending, omvang, trackX, trackY, tra
   }
 
   return marker;
+}
+
+function buildProjectStatus(status, nodeId, box) {
+  const isComplete = box.progress >= 99.999;
+  const label = projectStatusLabel(status);
+  const suffix = isComplete ? '' : t('chart.projectStatus.soFarSuffix');
+  const color = projectStatusColor(status);
+  const estimatedTextWidth = Math.ceil(label.length * PROJECT_STATUS_CHAR_WIDTH);
+  const contentWidth = PROJECT_STATUS_DOT_RADIUS * 2 + PROJECT_STATUS_TEXT_GAP + estimatedTextWidth;
+  const leftX = box.x + Math.max(TEXT_H_PADDING, (box.width - contentWidth) / 2);
+  const dotX = leftX + PROJECT_STATUS_DOT_RADIUS;
+  const textX = leftX + PROJECT_STATUS_DOT_RADIUS * 2 + PROJECT_STATUS_TEXT_GAP;
+  const statusTopY = box.y + box.height + PROJECT_STATUS_TOP_GAP;
+  const centerY = statusTopY + PROJECT_STATUS_DOT_RADIUS;
+  const suffixY = centerY + PROJECT_STATUS_DOT_RADIUS + PROJECT_STATUS_SUFFIX_GAP + PROJECT_STATUS_SUFFIX_FONT_SIZE / 2;
+  const statusBottom = suffix
+    ? suffixY + PROJECT_STATUS_SUFFIX_FONT_SIZE / 2
+    : centerY + PROJECT_STATUS_DOT_RADIUS;
+
+  const g = createEl('g');
+  g.setAttribute('data-project-status', status);
+  g.setAttribute('data-project-status-node-id', nodeId);
+  g.setAttribute('data-project-status-position', 'below-goal');
+  g.setAttribute('data-project-status-bottom', String(statusBottom));
+  g.setAttribute('data-project-status-content-width', String(contentWidth));
+  g.setAttribute('data-project-status-goal-width', String(box.width));
+  g.setAttribute('aria-label', suffix ? `${label}, ${suffix}` : label);
+
+  const dot = createEl('circle');
+  dot.setAttribute('data-project-status-indicator', 'true');
+  setAttrs(dot, {
+    cx: dotX,
+    cy: centerY,
+    r: PROJECT_STATUS_DOT_RADIUS,
+    fill: color,
+    'fill-opacity': 1,
+  });
+  g.appendChild(dot);
+
+  const text = createEl('text');
+  text.setAttribute('data-project-status-label', 'true');
+  setAttrs(text, {
+    x: textX,
+    y: centerY,
+    'dominant-baseline': 'central',
+    'alignment-baseline': 'central',
+    'text-anchor': 'start',
+    fill: '#334155',
+    'font-size': PROJECT_STATUS_FONT_SIZE,
+    'font-weight': 600,
+    'font-family': FONT_FAMILY,
+  });
+  text.textContent = label;
+  g.appendChild(text);
+
+  if (suffix) {
+    const suffixText = createEl('text');
+    suffixText.setAttribute('data-project-status-suffix', 'true');
+    setAttrs(suffixText, {
+      x: box.x + box.width / 2,
+      y: suffixY,
+      'dominant-baseline': 'central',
+      'alignment-baseline': 'central',
+      'text-anchor': 'middle',
+      fill: '#64748B',
+      'font-size': PROJECT_STATUS_SUFFIX_FONT_SIZE,
+      'font-weight': 600,
+      'font-style': 'italic',
+      'font-family': FONT_FAMILY,
+    });
+    suffixText.textContent = suffix;
+    g.appendChild(suffixText);
+  }
+
+  return g;
+}
+
+function projectStatusLabel(status) {
+  let label = t('chart.projectStatus.conform');
+  if (status === PROJECT_SPENDING_STATUS.MORE) label = t('chart.projectStatus.more');
+  if (status === PROJECT_SPENDING_STATUS.LESS) label = t('chart.projectStatus.less');
+  return label;
+}
+
+function projectStatusColor(status) {
+  if (status === PROJECT_SPENDING_STATUS.MORE) return COLOR_PROJECT_STATUS_MORE;
+  if (status === PROJECT_SPENDING_STATUS.LESS) return COLOR_PROJECT_STATUS_LESS;
+  return COLOR_PROJECT_STATUS_CONFORM;
 }
 
 // ── Legend builder ───────────────────────────────────────────────────────────

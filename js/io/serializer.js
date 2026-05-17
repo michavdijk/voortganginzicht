@@ -11,6 +11,7 @@
  *       "colorScheme": string,
  *       "customColor": string,
  *       "showActualSpending": boolean,
+ *       "showProjectStatus": boolean,
  *       "showSizeIndicators": boolean,
  *       "sizeIndicators": [{ "omvang": number, "label": string }]
  *     },
@@ -49,6 +50,7 @@ const DEFAULT_SETTINGS = {
   colorScheme: 'blauw',
   customColor: DEFAULT_CUSTOM_COLOR,
   showActualSpending: false,
+  showProjectStatus: false,
   showSizeIndicators: false,
   sizeIndicators: [],
 };
@@ -59,7 +61,7 @@ const DEFAULT_SETTINGS = {
  * Convert the in-memory tree, settings and project name to a JSON string.
  *
  * @param {import('../model/tree.js').Knoop | null} root
- * @param {{ showPercentage: boolean, showCompleteCheck?: boolean, showLegend?: boolean, colorScheme: string, customColor?: string, showActualSpending?: boolean, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }> }} settings
+ * @param {{ showPercentage: boolean, showCompleteCheck?: boolean, showLegend?: boolean, colorScheme: string, customColor?: string, showActualSpending?: boolean, showProjectStatus?: boolean, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }> }} settings
  * @param {string} [projectnaam]
  * @returns {string} JSON string
  */
@@ -74,6 +76,7 @@ export function serialize(root, settings, projectnaam = '') {
       colorScheme: normalizeColorScheme(settings.colorScheme),
       customColor: normalizeCustomColor(settings.customColor),
       showActualSpending: Boolean(settings.showActualSpending),
+      showProjectStatus: Boolean(settings.showProjectStatus),
       showSizeIndicators: Boolean(settings.showSizeIndicators),
       sizeIndicators: normalizeSizeIndicators(settings.sizeIndicators),
     },
@@ -156,7 +159,7 @@ export function deserialize(jsonString) {
  * Parse and sanitise the instellingen block from a v2 document.
  * Falls back to defaults for missing or invalid values.
  * @param {*} raw
- * @returns {{ showPercentage: boolean, showCompleteCheck: boolean, showLegend: boolean, colorScheme: string, customColor: string, showActualSpending: boolean, showSizeIndicators: boolean, sizeIndicators: Array<{ omvang: number, label: string }> }}
+ * @returns {{ showPercentage: boolean, showCompleteCheck: boolean, showLegend: boolean, colorScheme: string, customColor: string, showActualSpending: boolean, showProjectStatus: boolean, showSizeIndicators: boolean, sizeIndicators: Array<{ omvang: number, label: string }> }}
  */
 function parseInstellingen(raw) {
   if (typeof raw !== 'object' || raw === null) return { ...DEFAULT_SETTINGS };
@@ -183,13 +186,17 @@ function parseInstellingen(raw) {
     ? raw.showActualSpending
     : DEFAULT_SETTINGS.showActualSpending;
 
+  const showProjectStatus = typeof raw.showProjectStatus === 'boolean'
+    ? raw.showProjectStatus
+    : DEFAULT_SETTINGS.showProjectStatus;
+
   const showSizeIndicators = typeof raw.showSizeIndicators === 'boolean'
     ? raw.showSizeIndicators
     : DEFAULT_SETTINGS.showSizeIndicators;
 
   const sizeIndicators = normalizeSizeIndicators(raw.sizeIndicators);
 
-  return { showPercentage, showCompleteCheck, showLegend, colorScheme, customColor, showActualSpending, showSizeIndicators, sizeIndicators };
+  return { showPercentage, showCompleteCheck, showLegend, colorScheme, customColor, showActualSpending, showProjectStatus, showSizeIndicators, sizeIndicators };
 }
 
 /**

@@ -55,10 +55,11 @@
     import { getRoot, setRoot, isDirty, markClean, newProject } from '../js/model/project.js';
     import { CUSTOM_COLOR_SCHEME, getColorPalette, getSettings, updateSettings, resetSettings, normalizeSizeIndicators } from '../js/model/settings.js';
     import { computeLayout, FIXED_WIDTH, TEXT_H_PADDING, wrapTextToWidth } from '../js/chart/layout.js';
-    import { calcEffectiveActualSpending } from '../js/chart/progress-calc.js';
+    import { calcEffectiveActualSpending, calcProjectSpendingStatus } from '../js/chart/progress-calc.js';
     import { canRenderChart, getChartRenderIssue } from '../js/chart/render-validation.js';
     import { renderChart } from '../js/chart/renderer.js';
     import { serialize, deserialize } from '../js/io/serializer.js';
+    import { init as initSettingsPanel } from '../js/ui/settings-panel.js';
 
     // ─── Minimal test runner ─────────────────────────────────────────────────
     let passed = 0;
@@ -1415,6 +1416,165 @@
       document.body.removeChild(container);
     });
 
+    test('project status is conform when actual spending stays within 10 percent of expected spending', () => {
+      const root = makeRoot('Project');
+      const act = addChild(root, 'Activiteit');
+      setOmvang(act, 100);
+      setVoortgang(act, 50);
+
+      const container = document.createElement('div');
+      container.style.width = '700px';
+      document.body.appendChild(container);
+
+      setActueleBesteding(act, 45);
+      assert(calcProjectSpendingStatus(root) === 'conform', 'Lower boundary should still be conform');
+      renderChart(container, root, {
+        showPercentage: false,
+        colorScheme: 'blauw',
+        showActualSpending: true,
+        showProjectStatus: true,
+      });
+      let status = container.querySelector('[data-project-status="conform"]');
+      assert(status !== null, 'Expected conform status at -10%');
+      assert(status.querySelector('[data-project-status-label="true"]')?.textContent === 'Conform verwachting');
+      assert(status.querySelector('[data-project-status-suffix="true"]')?.textContent === '(tot nu toe)');
+      assert(status.querySelector('[data-project-status-suffix="true"]')?.getAttribute('text-anchor') === 'middle');
+      assert(status.querySelector('[data-project-status-suffix="true"]')?.getAttribute('font-style') === 'italic');
+
+      setActueleBesteding(act, 55);
+      assert(calcProjectSpendingStatus(root) === 'conform', 'Upper boundary should still be conform');
+      renderChart(container, root, {
+        showPercentage: false,
+        colorScheme: 'blauw',
+        showActualSpending: true,
+        showProjectStatus: true,
+      });
+      status = container.querySelector('[data-project-status="conform"]');
+      assert(status !== null, 'Expected conform status at +10%');
+      const indicator = status.querySelector('[data-project-status-indicator="true"]');
+      assert(indicator?.getAttribute('fill') === '#16A34A');
+      assert(indicator?.getAttribute('r') === '7');
+      assert(indicator?.hasAttribute('stroke') === false);
+      assert(status.querySelector('[data-project-status-label="true"]')?.getAttribute('dominant-baseline') === 'central');
+
+      setVoortgang(act, 100);
+      setActueleBesteding(act, 120);
+      renderChart(container, root, {
+        showPercentage: false,
+        colorScheme: 'blauw',
+        showActualSpending: true,
+        showProjectStatus: true,
+      });
+      status = container.querySelector('[data-project-status="more"]');
+      assert(status !== null, 'Expected completed project status');
+      assert(status.querySelector('[data-project-status-suffix="true"]') === null);
+      assert(status.querySelector('[data-project-status-label="true"]')?.textContent === 'Meer werk dan verwacht');
+
+      document.body.removeChild(container);
+    });
+
+    test('project status is more work than expected above 10 percent deviation', () => {
+      const root = makeRoot('Project');
+      const act = addChild(root, 'Activiteit');
+      setOmvang(act, 100);
+      setVoortgang(act, 50);
+      setActueleBesteding(act, 56);
+
+      const container = document.createElement('div');
+      container.style.width = '700px';
+      document.body.appendChild(container);
+
+      assert(calcProjectSpendingStatus(root) === 'more');
+      renderChart(container, root, {
+        showPercentage: false,
+        colorScheme: 'blauw',
+        showActualSpending: true,
+        showProjectStatus: true,
+      });
+
+      const status = container.querySelector('[data-project-status="more"]');
+      assert(status !== null, 'Expected more-work status');
+      assert(status.querySelector('[data-project-status-label="true"]')?.textContent === 'Meer werk dan verwacht');
+      assert(status.querySelector('[data-project-status-suffix="true"]')?.textContent === '(tot nu toe)');
+      assert(status.querySelector('[data-project-status-indicator="true"]')?.getAttribute('fill') === '#EA580C');
+
+      document.body.removeChild(container);
+    });
+
+    test('project status is less work than expected below minus 10 percent deviation', () => {
+      const root = makeRoot('Project');
+      const act = addChild(root, 'Activiteit');
+      setOmvang(act, 100);
+      setVoortgang(act, 50);
+      setActueleBesteding(act, 44);
+
+      const container = document.createElement('div');
+      container.style.width = '700px';
+      document.body.appendChild(container);
+
+      assert(calcProjectSpendingStatus(root) === 'less');
+      renderChart(container, root, {
+        showPercentage: false,
+        colorScheme: 'blauw',
+        showActualSpending: true,
+        showProjectStatus: true,
+      });
+
+      const status = container.querySelector('[data-project-status="less"]');
+      assert(status !== null, 'Expected less-work status');
+      assert(status.querySelector('[data-project-status-label="true"]')?.textContent === 'Minder werk dan verwacht');
+      assert(status.querySelector('[data-project-status-suffix="true"]')?.textContent === '(tot nu toe)');
+      assert(status.querySelector('[data-project-status-indicator="true"]')?.getAttribute('fill') === '#2563EB');
+      assert(
+        Number(status.getAttribute('data-project-status-content-width')) <= Number(status.getAttribute('data-project-status-goal-width')),
+        'Status row should stay within the goal box width'
+      );
+
+      document.body.removeChild(container);
+    });
+
+    test('project status is shown only for the goal and only when both status toggles are enabled', () => {
+      const root = makeRoot('Project');
+      const sub = addChild(root, 'Subdoel');
+      const act = addChild(sub, 'Activiteit');
+      setOmvang(act, 100);
+      setVoortgang(act, 50);
+      setActueleBesteding(act, 56);
+
+      const container = document.createElement('div');
+      container.style.width = '700px';
+      document.body.appendChild(container);
+
+      renderChart(container, root, {
+        showPercentage: false,
+        colorScheme: 'blauw',
+        showActualSpending: false,
+        showProjectStatus: true,
+      });
+      assert(container.querySelector('[data-project-status]') === null, 'Status should be hidden when actual spending is off');
+
+      renderChart(container, root, {
+        showPercentage: false,
+        colorScheme: 'blauw',
+        showActualSpending: true,
+        showProjectStatus: false,
+      });
+      assert(container.querySelector('[data-project-status]') === null, 'Status should be hidden when project status is off');
+
+      renderChart(container, root, {
+        showPercentage: false,
+        colorScheme: 'blauw',
+        showActualSpending: true,
+        showProjectStatus: true,
+      });
+      const statuses = container.querySelectorAll('[data-project-status]');
+      assert(statuses.length === 1, 'Expected a single project status');
+      assert(statuses[0].getAttribute('data-project-status-node-id') === root.id, 'Status should be attached to the goal');
+      assert(statuses[0].getAttribute('data-project-status-position') === 'below-goal');
+
+      document.body.removeChild(container);
+    });
+
     // ════════════════════════════════════════════════════════════════════════
     // Suite 12 – project JSON settings
     // ════════════════════════════════════════════════════════════════════════
@@ -1432,6 +1592,7 @@
         showLegend: false,
         colorScheme: 'groen',
         showActualSpending: true,
+        showProjectStatus: true,
         showSizeIndicators: true,
         sizeIndicators: [{ omvang: 4, label: 'Halverwege' }],
       }, 'Testproject');
@@ -1439,6 +1600,7 @@
 
       assert(doc.instellingen.showCompleteCheck === true);
       assert(doc.instellingen.showActualSpending === true);
+      assert(doc.instellingen.showProjectStatus === true);
       assert(doc.instellingen.showLegend === false);
       assert(doc.instellingen.showSizeIndicators === true);
       assert(doc.instellingen.sizeIndicators.length === 1);
@@ -1450,6 +1612,7 @@
       assert(result.valid === true);
       assert(result.settings.showCompleteCheck === true);
       assert(result.settings.showActualSpending === true);
+      assert(result.settings.showProjectStatus === true);
       assert(result.settings.showLegend === false);
       assert(result.settings.showSizeIndicators === true);
       assert(result.settings.sizeIndicators.length === 1);
@@ -1528,6 +1691,7 @@
       assert(result.settings.showLegend === false);
       assert(result.settings.showCompleteCheck === false);
       assert(result.settings.showActualSpending === false);
+      assert(result.settings.showProjectStatus === false);
       assert(result.settings.showSizeIndicators === false);
       assert(typeof result.settings.customColor === 'string');
       assert(Array.isArray(result.settings.sizeIndicators));
@@ -1573,6 +1737,7 @@
         colorScheme: CUSTOM_COLOR_SCHEME,
         customColor: '#FFFF00',
         showActualSpending: true,
+        showProjectStatus: true,
         showSizeIndicators: true,
         sizeIndicators: [{ omvang: 3, label: 'Mijlpaal' }],
       });
@@ -1586,6 +1751,7 @@
       assert(settings.colorScheme === 'blauw');
       assert(settings.customColor === '#2563EB');
       assert(settings.showActualSpending === false);
+      assert(settings.showProjectStatus === false);
       assert(settings.showSizeIndicators === false);
       assert(Array.isArray(settings.sizeIndicators));
       assert(settings.sizeIndicators.length === 0);
@@ -1614,6 +1780,38 @@
 
       updateSettings({ showActualSpending: false });
       assert(getSettings().showActualSpending === false);
+    });
+
+    test('settings store the project status toggle', () => {
+      resetSettings();
+      updateSettings({ showProjectStatus: true });
+      assert(getSettings().showProjectStatus === true);
+
+      updateSettings({ showProjectStatus: false });
+      assert(getSettings().showProjectStatus === false);
+    });
+
+    test('settings panel shows project status only when actual spending is enabled', () => {
+      resetSettings();
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+
+      initSettingsPanel(container);
+      assert(container.querySelector('[data-setting-project-status="true"]') === null);
+
+      updateSettings({ showActualSpending: true });
+      initSettingsPanel(container);
+      const projectStatusRow = container.querySelector('[data-setting-project-status="true"]');
+      assert(projectStatusRow !== null, 'Project status setting should be visible');
+      assert(projectStatusRow.classList.contains('settings-panel__row--nested'));
+      assert(projectStatusRow.textContent.includes('Status project tonen'));
+
+      updateSettings({ showActualSpending: false, showProjectStatus: true });
+      initSettingsPanel(container);
+      assert(container.querySelector('[data-setting-project-status="true"]') === null);
+
+      document.body.removeChild(container);
+      resetSettings();
     });
 
     test('settings store the complete check toggle', () => {
