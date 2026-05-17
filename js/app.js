@@ -15,6 +15,7 @@ import { init as initToolbar } from './ui/toolbar.js';
 import { init as initSettingsPanel } from './ui/settings-panel.js';
 import { init as initLangSwitcher } from './ui/lang-switcher.js';
 import { init as initHelpPanel } from './ui/help-panel.js';
+import { init as initContactFeedbackPanel } from './ui/contact-feedback-panel.js';
 import { updateSettings, getSettings, resetSettings } from './model/settings.js';
 import { showError, showSuccess } from './ui/dialogs.js';
 import { serialize, deserialize } from './io/serializer.js';
@@ -60,6 +61,7 @@ function initApplication() {
   initToolbar(toolbarEl);
   initTreeEditor(treeEditorEl);
   initHelpPanel();
+  initContactFeedbackPanel();
   if (langEl) initLangSwitcher(langEl);
 
   const settingsPanelEl = document.getElementById('settings-panel');
@@ -622,6 +624,13 @@ function applyStaticTranslations() {
 
   const footerHelpLink = document.getElementById('footer-help-link');
   if (footerHelpLink) footerHelpLink.textContent = t('help.overview.nav');
+
+  const footerContactLink = document.getElementById('footer-contact-link');
+  if (footerContactLink) {
+    footerContactLink.textContent = t('contact.feedback.link');
+    footerContactLink.title = t('contact.feedback.open');
+    footerContactLink.setAttribute('aria-label', t('contact.feedback.open'));
+  }
 
   updateTreePanelToggleLabels();
   updateChartZoomControls();

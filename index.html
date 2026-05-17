@@ -10,6 +10,7 @@
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="apple-touch-icon-precomposed" href="apple-touch-icon-precomposed.png" />
+  <link rel="preconnect" href="https://storage.ko-fi.com" crossorigin />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -193,7 +194,11 @@
 
   <footer class="app-footer">
     <span class="app-footer__copyright">© Micha van Dijk 2026</span>
-    <a href="#help" class="app-footer__help-link" id="footer-help-link" data-help-section="overview">Over deze tool</a>
+    <span class="app-footer__links">
+      <a href="#help" class="app-footer__help-link" id="footer-help-link" data-help-section="overview">Over deze tool</a>
+      <span class="app-footer__separator" aria-hidden="true">·</span>
+      <a href="#contact-feedback" class="app-footer__contact-link" id="footer-contact-link" data-contact-feedback="true">Contact &amp; feedback</a>
+    </span>
     <span class="app-footer__version" id="app-version"></span>
   </footer>
 

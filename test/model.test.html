@@ -60,6 +60,7 @@
     import { renderChart } from '../js/chart/renderer.js';
     import { serialize, deserialize } from '../js/io/serializer.js';
     import { init as initSettingsPanel } from '../js/ui/settings-panel.js';
+    import { init as initContactFeedbackPanel } from '../js/ui/contact-feedback-panel.js';
 
     // ─── Minimal test runner ─────────────────────────────────────────────────
     let passed = 0;
@@ -1812,6 +1813,63 @@
 
       document.body.removeChild(container);
       resetSettings();
+    });
+
+    test('contact feedback footer link opens a modal with contact details and official Ko-fi button', () => {
+      const originalKofiWidget = window.kofiwidget2;
+      const initCalls = [];
+      window.kofiwidget2 = {
+        init(text, color, id) {
+          initCalls.push({ text, color, id });
+        },
+        draw() {
+          document.writeln('<a data-official-kofi-button="true">Support me on Ko-fi</a>');
+        },
+      };
+
+      const trigger = document.createElement('a');
+      trigger.href = '#contact-feedback';
+      trigger.dataset.contactFeedback = 'true';
+      document.body.appendChild(trigger);
+
+      try {
+        initContactFeedbackPanel();
+        assert(trigger.textContent === 'Contact & feedback');
+        assert(initCalls.length === 1, 'Ko-fi button should be prepared before the modal opens');
+
+        trigger.click();
+
+        const overlay = document.querySelector('.contact-overlay');
+        const dialog = document.querySelector('[data-contact-feedback-dialog="true"]');
+        assert(overlay !== null && overlay.hidden === false, 'Contact overlay should be visible');
+        assert(dialog !== null, 'Contact dialog should exist');
+        assert(dialog.getAttribute('role') === 'dialog');
+        assert(dialog.querySelector('.contact-dialog__title')?.textContent === 'Contact & feedback');
+        assert(dialog.textContent.includes('Ondersteun de doorontwikkeling'));
+
+        const email = dialog.querySelector('.contact-dialog__email');
+        assert(email?.getAttribute('href') === 'mailto:info@voortganginzicht.nl');
+        assert(email?.textContent === 'info@voortganginzicht.nl');
+        assert(email?.querySelector('[data-contact-email-icon="true"]') !== null);
+
+        const supportButton = dialog.querySelector('[data-official-kofi-button="true"]');
+        assert(initCalls.length === 1);
+        assert(initCalls[0].text === 'Support me on Ko-fi');
+        assert(initCalls[0].color === '#2463EB');
+        assert(initCalls[0].id === 'M4M51ZQBR8');
+        assert(supportButton?.textContent === 'Support me on Ko-fi');
+        assert(document.querySelector('script[data-kofi-widget-script="true"]') === null);
+
+        dialog.querySelector('[data-contact-feedback-close="true"]').click();
+        assert(overlay.hidden === true, 'Contact overlay should close');
+      } finally {
+        document.body.removeChild(trigger);
+        if (originalKofiWidget === undefined) {
+          delete window.kofiwidget2;
+        } else {
+          window.kofiwidget2 = originalKofiWidget;
+        }
+      }
     });
 
     test('settings store the complete check toggle', () => {
