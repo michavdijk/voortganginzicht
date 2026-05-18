@@ -164,12 +164,11 @@ export function renderChart(container, root, settings = { showPercentage: true, 
   let extendedTotalHeight = totalHeight;
 
   if (showLegend || showDisclaimer) {
-    const contentRight = boxes.length > 0 ? Math.max(...boxes.map(b => b.x + b.width)) : totalWidth - 16;
     const footerY = sizeGuide
       ? sizeGuide.y + SIZE_GUIDE_HEIGHT + 8
       : chartBottom + 24;
     const footerX = FOOTER_SIDE_PADDING;
-    let footerRight = Math.max(contentRight, footerX + LEGEND_WIDTH);
+    let footerRight = Math.max(totalWidth - FOOTER_SIDE_PADDING, footerX + LEGEND_WIDTH);
     let legendX = null;
     let disclaimerX = null;
     let disclaimerWidth = 0;
@@ -926,12 +925,20 @@ function buildDisclaimer(x, y, width, height, text) {
       tspan.textContent = EMPTY_DISCLAIMER_LINE;
     } else {
       tspan.textContent = line;
+      fitDisclaimerLineToWidth(tspan, line, width);
     }
     body.appendChild(tspan);
   });
   g.appendChild(body);
 
   return g;
+}
+
+function fitDisclaimerLineToWidth(tspan, line, width) {
+  const textWidth = Math.max(1, width - 24);
+  const measuredWidth = Math.max(1, measureDisclaimerTextWidth(line));
+  tspan.setAttribute('textLength', String(Math.min(measuredWidth, textWidth)));
+  tspan.setAttribute('lengthAdjust', 'spacingAndGlyphs');
 }
 
 function wrapDisclaimerText(text, width) {

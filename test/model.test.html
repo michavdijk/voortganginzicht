@@ -1225,6 +1225,10 @@
       assert(disclaimer !== null, 'Disclaimer should render when enabled with text');
       assert(disclaimer.querySelector('[data-chart-disclaimer-title="true"]')?.textContent === 'TOELICHTING');
       assert(disclaimer.textContent.includes('Deze rapportage is een momentopname.'));
+      let svg = container.querySelector('svg');
+      let viewBoxWidth = Number(svg.getAttribute('viewBox').split(' ')[2]);
+      let disclaimerBackground = disclaimer.querySelector('rect');
+      assert(Number(disclaimerBackground.getAttribute('width')) === viewBoxWidth - 32, 'Disclaimer should use the available footer width when legend is hidden');
 
       renderChart(container, root, {
         showPercentage: false,
@@ -1274,7 +1278,7 @@
       const legend = container.querySelector('[data-chart-legend="true"]');
       assert(disclaimer !== null && legend !== null, 'Disclaimer and legend should both render');
 
-      const disclaimerBackground = disclaimer.querySelector('rect');
+      disclaimerBackground = disclaimer.querySelector('rect');
       const legendBackground = legend.querySelector('rect');
       assert(disclaimerBackground.getAttribute('y') === legendBackground.getAttribute('y'));
       assert(disclaimerBackground.getAttribute('height') === legendBackground.getAttribute('height'));
