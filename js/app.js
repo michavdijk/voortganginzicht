@@ -23,6 +23,7 @@ import { saveToFile, loadFromFile, supportsSaveFilePicker, pickSaveFile, writeBl
 import { on, emit } from './events.js';
 import { renderChart } from './chart/renderer.js';
 import { canRenderChart, formatChartRenderIssue, getChartRenderIssue } from './chart/render-validation.js';
+import { canCopyChartToClipboard, chartSvgToPngBlob, copyChartToClipboard } from './chart/clipboard.js';
 import { t } from './i18n.js';
 
 const PROJECT_NAME_MAX_LENGTH = 100;
@@ -93,6 +94,7 @@ function initApplication() {
   document.addEventListener('toolbar:load',        handleLoad);
   document.addEventListener('toolbar:save',        handleSave);
   document.addEventListener('toolbar:download',    handleDownload);
+  document.addEventListener('toolbar:copy-report', handleCopyReport);
 
   // ── Unsaved-changes warning on tab close ──────────────────────────────────
   window.addEventListener('beforeunload', (e) => {
@@ -475,8 +477,7 @@ async function handleSave() {
 }
 
 async function handleDownload() {
-  const chartBody = document.querySelector('#chart-panel .panel__body');
-  const svg = chartBody ? chartBody._chartSvg : null;
+  const svg = getCurrentChartSvg();
 
   if (!svg) {
     showError(t('error.noChart'));
@@ -489,53 +490,49 @@ async function handleDownload() {
     if (supportsSaveFilePicker()) {
       fileHandle = await pickSaveFile(filename, [
         {
-          description: 'PNG afbeelding',
+          description: t('file.picker.pngDescription'),
           accept: { 'image/png': ['.png'] },
         },
       ]);
       if (!fileHandle) return;
     }
 
-    const viewBox = svg.getAttribute('viewBox').split(' ');
-    const w = parseFloat(viewBox[2]);
-    const h = parseFloat(viewBox[3]);
-    const scale = 2;
-
-    const svgStr = new XMLSerializer().serializeToString(svg);
-    const img    = new Image();
-    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
-
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width  = w * scale;
-      canvas.height = h * scale;
-      const ctx = canvas.getContext('2d');
-      ctx.scale(scale, scale);
-      ctx.drawImage(img, 0, 0);
-
-      canvas.toBlob(async (blob) => {
-        if (!blob) {
-          showError(t('error.imageGen'));
-          return;
-        }
-
-        try {
-          if (fileHandle) {
-            await writeBlobToFileHandle(blob, fileHandle);
-          } else {
-            downloadBlob(blob, filename);
-          }
-          showSuccess(t('success.downloaded'));
-        } catch (err) {
-          showError(t('error.downloadFailed', { message: err.message }));
-        }
-      }, 'image/png');
-    };
-
-    img.onerror = () => showError(t('error.imageGen'));
+    const blob = await chartSvgToPngBlob(svg);
+    if (fileHandle) {
+      await writeBlobToFileHandle(blob, fileHandle);
+    } else {
+      downloadBlob(blob, filename);
+    }
+    showSuccess(t('success.downloaded'));
   } catch (err) {
     showError(t('error.downloadFailed', { message: err.message }));
   }
+}
+
+async function handleCopyReport() {
+  const svg = getCurrentChartSvg();
+
+  if (!svg) {
+    showError(t('error.noChart'));
+    return;
+  }
+
+  if (!canCopyChartToClipboard()) {
+    showError(t('error.clipboardUnsupported'));
+    return;
+  }
+
+  try {
+    await copyChartToClipboard(svg);
+    showSuccess(t('success.copied'));
+  } catch (err) {
+    showError(t('error.copyFailed', { message: err.message }));
+  }
+}
+
+function getCurrentChartSvg() {
+  const chartBody = document.querySelector('#chart-panel .panel__body');
+  return chartBody ? chartBody._chartSvg : null;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

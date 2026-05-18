@@ -1,76 +1,103 @@
 /**
- * Clipboard export module.
+ * Clipboard/export helpers for chart SVGs.
  *
- * Converts an SVG element to a PNG image and copies it to the clipboard
- * using the Clipboard API.  Returns a Promise<boolean> — true on success.
+ * Both download and clipboard export use the same PNG Blob generation so the
+ * saved and copied images stay identical.
  */
 
-const CANVAS_SCALE = 2; // 2× for high-DPI / Retina displays
+const CANVAS_SCALE = 2;
+const PNG_MIME_TYPE = 'image/png';
 
 /**
- * Copy the given SVG element to the clipboard as a PNG image.
- *
- * Steps:
- *  1. Parse dimensions from the viewBox attribute.
- *  2. Serialize the SVG to a string.
- *  3. Render it on an offscreen canvas at 2× resolution.
- *  4. Convert the canvas to a PNG Blob.
- *  5. Write the Blob to the clipboard via the Clipboard API.
- *
+ * Convert a chart SVG to a high-DPI PNG Blob.
  * @param {SVGSVGElement} svgElement
- * @returns {Promise<boolean>}  true on success, false on any error
+ * @returns {Promise<Blob>}
  */
-export function copyChartToClipboard(svgElement) {
-  try {
-    // Step 1 — get W and H from the viewBox attribute ("0 0 W H").
-    const viewBox = svgElement.getAttribute('viewBox') || '';
-    const parts = viewBox.split(/[\s,]+/).map(Number);
-    const svgWidth = (parts.length === 4 && parts[2] > 0) ? parts[2] : 800;
-    const svgHeight = (parts.length === 4 && parts[3] > 0) ? parts[3] : 600;
-
-    // Step 2 — serialize the SVG.
-    let svgStr = new XMLSerializer().serializeToString(svgElement);
-
-    // Ensure the XML namespace declaration is present (required for Image loading).
-    if (!svgStr.includes('xmlns="http://www.w3.org/2000/svg"')) {
-      svgStr = svgStr.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
-    }
-
-    const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
-
-    // Step 3–5 — return a Promise.
-    return new Promise((resolve) => {
+export function chartSvgToPngBlob(svgElement) {
+  return new Promise((resolve, reject) => {
+    try {
+      const { width, height } = getSvgDimensions(svgElement);
+      const dataUrl = svgToDataUrl(svgElement);
       const img = new Image();
 
       img.onload = () => {
         try {
-          // Create canvas at 2× resolution.
           const canvas = document.createElement('canvas');
-          canvas.width = svgWidth * CANVAS_SCALE;
-          canvas.height = svgHeight * CANVAS_SCALE;
+          canvas.width = width * CANVAS_SCALE;
+          canvas.height = height * CANVAS_SCALE;
 
           const ctx = canvas.getContext('2d');
           ctx.scale(CANVAS_SCALE, CANVAS_SCALE);
           ctx.drawImage(img, 0, 0);
 
-          canvas.toBlob(
-            (blob) => {
-              navigator.clipboard
-                .write([new ClipboardItem({ 'image/png': blob })])
-                .then(() => resolve(true))
-                .catch(() => resolve(false));
-            },
-            'image/png'
-          );
-        } catch (_err) {
-          resolve(false);
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error('Could not create PNG Blob.'));
+            }
+          }, PNG_MIME_TYPE);
+        } catch (err) {
+          reject(err);
         }
       };
 
-      img.onerror = () => resolve(false);
+      img.onerror = () => reject(new Error('Could not load SVG image.'));
       img.src = dataUrl;
-    });
-  } catch (_err) {
-    return Promise.resolve(false);
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+/**
+ * Whether this browser exposes the Clipboard API needed for PNG images.
+ * @returns {boolean}
+ */
+export function canCopyChartToClipboard() {
+  return (
+    typeof navigator !== 'undefined' &&
+    typeof navigator.clipboard?.write === 'function' &&
+    typeof ClipboardItem !== 'undefined'
+  );
+}
+
+/**
+ * Copy the given SVG element to the clipboard as a PNG image.
+ *
+ * The ClipboardItem receives a Blob promise so navigator.clipboard.write() is
+ * called immediately from the user's click handler, which keeps browser user
+ * activation rules happier while the image is still being generated.
+ *
+ * @param {SVGSVGElement} svgElement
+ * @returns {Promise<void>}
+ */
+export function copyChartToClipboard(svgElement) {
+  if (!canCopyChartToClipboard()) {
+    return Promise.reject(new Error('Clipboard API is not supported.'));
   }
+
+  const blobPromise = chartSvgToPngBlob(svgElement);
+  return navigator.clipboard.write([
+    new ClipboardItem({ [PNG_MIME_TYPE]: blobPromise }),
+  ]);
+}
+
+function getSvgDimensions(svgElement) {
+  const viewBox = svgElement.getAttribute('viewBox') || '';
+  const parts = viewBox.split(/[\s,]+/).map(Number);
+  return {
+    width: parts.length === 4 && parts[2] > 0 ? parts[2] : 800,
+    height: parts.length === 4 && parts[3] > 0 ? parts[3] : 600,
+  };
+}
+
+function svgToDataUrl(svgElement) {
+  let svgStr = new XMLSerializer().serializeToString(svgElement);
+
+  if (!svgStr.includes('xmlns="http://www.w3.org/2000/svg"')) {
+    svgStr = svgStr.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
 }

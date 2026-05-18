@@ -61,6 +61,7 @@
     import { serialize, deserialize } from '../js/io/serializer.js';
     import { init as initSettingsPanel } from '../js/ui/settings-panel.js';
     import { init as initContactFeedbackPanel } from '../js/ui/contact-feedback-panel.js';
+    import { init as initToolbar } from '../js/ui/toolbar.js';
     import { renderTree, jumpToNode } from '../js/ui/tree-editor.js';
 
     // ─── Minimal test runner ─────────────────────────────────────────────────
@@ -2032,6 +2033,56 @@
         } else {
           window.kofiwidget2 = originalKofiWidget;
         }
+      }
+    });
+
+    test('toolbar groups report export actions in one menu', () => {
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const actions = [];
+      const onDownload = () => actions.push('download');
+      const onCopy = () => actions.push('copy');
+      document.addEventListener('toolbar:download', onDownload);
+      document.addEventListener('toolbar:copy-report', onCopy);
+
+      try {
+        initToolbar(container);
+
+        const exportButton = container.querySelector('[data-toolbar-export-button="true"]');
+        const exportMenu = container.querySelector('[data-toolbar-export-menu="true"]');
+        assert(exportButton !== null, 'Export button should render');
+        assert(exportMenu !== null, 'Export menu should render');
+        assert(exportButton.textContent === 'Rapport exporteren');
+        assert(exportButton.disabled === true, 'Export menu should start disabled without a chart');
+        assert(exportMenu.hidden === true);
+
+        emit('chart-generated', {});
+        assert(exportButton.disabled === false, 'Export menu should enable when a chart is generated');
+
+        exportButton.click();
+        assert(exportButton.getAttribute('aria-expanded') === 'true');
+        assert(exportMenu.hidden === false);
+
+        const menuItems = exportMenu.querySelectorAll('[role="menuitem"]');
+        assert(menuItems.length === 2, 'Export menu should contain download and clipboard actions');
+        assert(menuItems[0].textContent === 'Download als PNG');
+        assert(menuItems[1].textContent === 'Kopieer naar klembord');
+
+        menuItems[0].click();
+        assert(actions[0] === 'download');
+        assert(exportMenu.hidden === true, 'Menu should close after choosing download');
+
+        exportButton.click();
+        menuItems[1].click();
+        assert(actions[1] === 'copy');
+        assert(exportMenu.hidden === true, 'Menu should close after choosing clipboard copy');
+
+        emit('project-loaded', {});
+        assert(exportButton.disabled === true, 'Export menu should reset when a project is loaded');
+      } finally {
+        document.removeEventListener('toolbar:download', onDownload);
+        document.removeEventListener('toolbar:copy-report', onCopy);
+        document.body.removeChild(container);
       }
     });
 
