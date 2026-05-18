@@ -2217,7 +2217,7 @@
       try {
         initSettingsPanel(container);
         const label = Array.from(container.querySelectorAll('.settings-panel__label'))
-          .find(el => el.textContent.includes('Naam project als titel tonen'));
+          .find(el => el.textContent.includes('Projectnaam als titel tonen'));
         const checkbox = label?.querySelector('input[type="checkbox"]');
         assert(label !== undefined, 'Project title setting should be visible');
         assert(checkbox !== null, 'Project title setting should have a checkbox');

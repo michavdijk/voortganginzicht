@@ -2,7 +2,7 @@
  * Settings panel UI module.
  *
  * Renders a compact settings section with chart options:
- * – "Naam project als titel tonen" checkbox
+ * – "Projectnaam als titel tonen" checkbox
  * – "Percentage opnemen in output" checkbox
  * – "Vinkje bij voltooid tonen" checkbox
  * – "Legenda tonen" checkbox
