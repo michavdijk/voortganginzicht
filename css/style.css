@@ -1197,6 +1197,12 @@ ul.tree__children {
   background: var(--color-btn-bg);
 }
 
+.tree__node--jump-target > .tree__node-row {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  box-shadow: inset 0 0 0 1px #bfdbfe;
+}
+
 /* Top line: dot + name + badge + actions */
 .tree__node-row-main {
   display: flex;
@@ -1744,6 +1750,16 @@ ul.tree__children {
 #chart-svg-container svg {
   display: block;
   max-width: 100%;
+}
+
+.chart-node {
+  cursor: pointer;
+}
+
+.chart-node:hover .chart-node__border,
+.chart-node:focus-visible .chart-node__border {
+  stroke: #1d4ed8;
+  stroke-width: 2;
 }
 
 .chart-loading {

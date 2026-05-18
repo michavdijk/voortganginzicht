@@ -28,6 +28,7 @@ import {
   calcProjectSpendingStatus,
 } from './progress-calc.js';
 import { getColorPalette, normalizeDisclaimerText, normalizeSizeIndicators } from '../model/settings.js';
+import { emit } from '../events.js';
 import { t } from '../i18n.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -296,6 +297,23 @@ function canRenderCompleteIndicator(box) {
 function buildBox(box, palette, showPercentage, showCompleteCheck, showActualSpending) {
   const { x, y, width, height, progress, node } = box;
   const g           = createEl('g');
+  g.classList.add('chart-node');
+  g.setAttribute('data-chart-node', 'true');
+  g.setAttribute('data-chart-node-id', node.id);
+  g.setAttribute('role', 'button');
+  g.setAttribute('tabindex', '0');
+  g.setAttribute('aria-label', t('chart.jumpToNode', { name: node.naam }));
+  g.addEventListener('click', () => emit('chart-node-selected', { nodeId: node.id }));
+  g.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ' && event.key !== 'Spacebar') return;
+    event.preventDefault();
+    emit('chart-node-selected', { nodeId: node.id });
+  });
+
+  const actionTitle = createEl('title');
+  actionTitle.textContent = t('chart.jumpToNode', { name: node.naam });
+  g.appendChild(actionTitle);
+
   const titleHeight = height - PROGRESS_BAR_HEIGHT;
   const barY        = y + titleHeight;
   const isBranch    = node.kinderen.length > 0;
@@ -351,6 +369,7 @@ function buildBox(box, palette, showPercentage, showCompleteCheck, showActualSpe
 
   // ── Outer border ──────────────────────────────────────────────────────────
   const border = createEl('rect');
+  border.classList.add('chart-node__border');
   setAttrs(border, { x, y, width, height, fill: 'none', stroke: borderColor, 'stroke-width': 1, rx: 4 });
   g.appendChild(border);
 

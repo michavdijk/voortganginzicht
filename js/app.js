@@ -80,6 +80,7 @@ function initApplication() {
   on('settings-changed',  autoRender);
   on('tree-changed',      scheduleRender);
   on('language-changed',  autoRender);
+  on('chart-node-selected', () => setTreePanelCollapsed(false));
 
   // Re-render on window resize (debounced, width-change only).
   window.addEventListener('resize', scheduleResizeRender);
@@ -323,13 +324,16 @@ function setTreePanelCollapsed(collapsed) {
 
   if (!layout || !collapseBtn || !expandBtn) return;
 
+  const wasCollapsed = layout.classList.contains('app-layout--tree-collapsed');
   layout.classList.toggle('app-layout--tree-collapsed', collapsed);
   collapseBtn.setAttribute('aria-expanded', String(!collapsed));
   expandBtn.setAttribute('aria-expanded', String(!collapsed));
   updateTreePanelToggleLabels();
 
   // The chart width changes immediately after the grid switches columns.
-  requestAnimationFrame(autoRender);
+  if (wasCollapsed !== collapsed) {
+    requestAnimationFrame(autoRender);
+  }
 }
 
 function updateTreePanelToggleLabels() {

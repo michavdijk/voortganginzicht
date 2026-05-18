@@ -61,6 +61,7 @@
     import { serialize, deserialize } from '../js/io/serializer.js';
     import { init as initSettingsPanel } from '../js/ui/settings-panel.js';
     import { init as initContactFeedbackPanel } from '../js/ui/contact-feedback-panel.js';
+    import { renderTree, jumpToNode } from '../js/ui/tree-editor.js';
 
     // ─── Minimal test runner ─────────────────────────────────────────────────
     let passed = 0;
@@ -1144,6 +1145,46 @@
       document.body.removeChild(container);
     });
 
+    test('chart renderer exposes report nodes as jump targets for the work structure', () => {
+      const root = makeRoot('Project');
+      const act = addChild(root, 'Activiteit A');
+      setOmvang(act, 5);
+
+      const container = document.createElement('div');
+      container.style.width = '700px';
+      document.body.appendChild(container);
+
+      const events = captureEvents('chart-node-selected');
+
+      try {
+        renderChart(container, root, {
+          showPercentage: false,
+          colorScheme: 'blauw',
+        });
+
+        const chartNode = container.querySelector(`[data-chart-node-id="${act.id}"]`);
+        assert(chartNode !== null, 'Activity box should expose its node id');
+        assert(chartNode.getAttribute('role') === 'button');
+        assert(chartNode.getAttribute('tabindex') === '0');
+        assert(chartNode.getAttribute('aria-label').includes('Activiteit A'));
+        assert(chartNode.querySelector('.chart-node__border') !== null);
+
+        chartNode.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        assert(events.length === 1);
+        assert(events[0].nodeId === act.id);
+
+        chartNode.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        assert(events.length === 2, 'Enter should trigger the same jump event');
+        assert(events[1].nodeId === act.id);
+
+        chartNode.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        assert(events.length === 2, 'Unrelated keys should not trigger a jump event');
+      } finally {
+        events._cleanup();
+        document.body.removeChild(container);
+      }
+    });
+
     test('chart renderer shows legend only when enabled and only includes actual spending when markers are visible', () => {
       const root = makeRoot('Project');
       const act = addChild(root, 'Activiteit');
@@ -2053,6 +2094,50 @@
 
       document.body.removeChild(container);
       resetSettings();
+    });
+
+    test('tree editor can reveal and highlight a node from the report', () => {
+      const root = makeRoot('Project');
+      const act = addChild(root, 'Activiteit A');
+      setOmvang(act, 5);
+
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const originalRequestAnimationFrame = window.requestAnimationFrame;
+      const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+      let scrolledElement = null;
+
+      try {
+        window.requestAnimationFrame = (callback) => {
+          callback();
+          return 1;
+        };
+        HTMLElement.prototype.scrollIntoView = function () {
+          scrolledElement = this;
+        };
+
+        renderTree(container, root);
+
+        assert(jumpToNode(act.id) === true, 'Existing nodes should be jumpable');
+        const item = container.querySelector(`[data-node-id="${act.id}"]`);
+        assert(item !== null, 'Rendered tree item should exist');
+        assert(item.classList.contains('tree__node--jump-target'), 'Jump target should be highlighted');
+        assert(item.querySelector('.tree__node-name')?.tabIndex === -1, 'Jump target name should be focusable programmatically');
+        assert(scrolledElement === item.firstElementChild, 'Jumping to an activity should scroll its own row');
+
+        scrolledElement = null;
+        assert(jumpToNode(root.id) === true, 'The top-level goal should also be jumpable');
+        const rootItem = container.querySelector(`[data-node-id="${root.id}"]`);
+        assert(rootItem !== null, 'Rendered root tree item should exist');
+        assert(rootItem.classList.contains('tree__node--jump-target'), 'Root jump target should be highlighted');
+        assert(scrolledElement === rootItem.firstElementChild, 'Jumping to the goal should scroll the goal row, not the full subtree');
+
+        assert(jumpToNode('missing-node') === false, 'Unknown nodes should not be jumpable');
+      } finally {
+        window.requestAnimationFrame = originalRequestAnimationFrame;
+        HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+        document.body.removeChild(container);
+      }
     });
 
     test('custom color palette derives background and readable text colors', () => {

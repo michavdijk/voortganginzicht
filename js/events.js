@@ -6,6 +6,7 @@
  *   'project-loaded'  – a project was initialised or loaded from file
  *   'project-saved'   – the project was successfully saved to file
  *   'chart-generated' – the SVG chart was (re)generated
+ *   'chart-node-selected' – a report item should be revealed in the work tree
  */
 
 const listeners = {};

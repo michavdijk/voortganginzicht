@@ -30,6 +30,7 @@ import { t } from '../i18n.js';
 
 // The container element provided by the caller.
 let _container = null;
+let jumpHighlightTimer = null;
 
 /**
  * Initialise the tree editor.
@@ -43,6 +44,7 @@ export function init(container) {
   on('project-loaded', () => renderTree(_container, getRoot()));
   on('settings-changed', () => renderTree(_container, getRoot()));
   on('language-changed', () => renderTree(_container, getRoot()));
+  on('chart-node-selected', (event) => jumpToNode(event?.nodeId));
 }
 
 function handleTreeChanged(event) {
@@ -60,6 +62,7 @@ function handleTreeChanged(event) {
  * @param {Knoop | null} root
  */
 export function renderTree(container, root) {
+  _container = container;
   container.innerHTML = '';
 
   if (!root) {
@@ -71,6 +74,59 @@ export function renderTree(container, root) {
   ul.className = 'tree__root';
   ul.appendChild(buildNodeElement(root));
   container.appendChild(ul);
+}
+
+/**
+ * Scroll to and highlight a work-structure node.
+ * @param {string} nodeId
+ */
+export function jumpToNode(nodeId) {
+  if (!_container || !nodeId) return false;
+
+  const item = findTreeItemByNodeId(nodeId);
+  if (!item) return false;
+
+  clearJumpHighlights();
+  item.classList.add('tree__node--jump-target');
+  clearTimeout(jumpHighlightTimer);
+  jumpHighlightTimer = setTimeout(() => {
+    item.classList.remove('tree__node--jump-target');
+  }, 1800);
+
+  const focusTarget = item.querySelector('.tree__node-name');
+  if (focusTarget instanceof HTMLElement) {
+    focusTarget.tabIndex = -1;
+  }
+  const rowTarget = item.firstElementChild;
+  const revealTarget = rowTarget instanceof HTMLElement ? rowTarget : item;
+
+  const reveal = () => {
+    if (!item.isConnected) return;
+    revealTarget.scrollIntoView?.({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+    if (focusTarget instanceof HTMLElement && focusTarget.isConnected) {
+      focusTarget.focus({ preventScroll: true });
+    }
+  };
+
+  if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+    window.requestAnimationFrame(reveal);
+  } else {
+    setTimeout(reveal, 0);
+  }
+
+  return true;
+}
+
+function findTreeItemByNodeId(nodeId) {
+  return Array.from(_container.querySelectorAll('.tree__node'))
+    .find(el => el.dataset.nodeId === nodeId) || null;
+}
+
+function clearJumpHighlights() {
+  if (!_container) return;
+  _container
+    .querySelectorAll('.tree__node--jump-target')
+    .forEach(el => el.classList.remove('tree__node--jump-target'));
 }
 
 // ── Empty state ──────────────────────────────────────────────────────────────
