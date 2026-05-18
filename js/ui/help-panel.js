@@ -54,7 +54,7 @@ const HELP_CONTENT = {
     { type: 'paragraph', key: 'intro' },
     { type: 'heading', key: 'display.heading' },
     { type: 'paragraph', key: 'display.body' },
-    { type: 'list', keys: ['display.color', 'display.percentage', 'display.completeCheck', 'display.legend', 'display.disclaimer'] },
+    { type: 'list', keys: ['display.color', 'display.projectTitle', 'display.percentage', 'display.completeCheck', 'display.legend', 'display.disclaimer'] },
     { type: 'heading', key: 'compareSize.heading' },
     { type: 'paragraph', key: 'compareSize.body' },
     { type: 'paragraph', key: 'sizeIndicators.examplesIntro' },

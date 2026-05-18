@@ -2,6 +2,7 @@
  * Settings panel UI module.
  *
  * Renders a compact settings section with chart options:
+ * – "Naam project als titel tonen" checkbox
  * – "Percentage opnemen in output" checkbox
  * – "Vinkje bij voltooid tonen" checkbox
  * – "Legenda tonen" checkbox
@@ -95,6 +96,26 @@ function render() {
   }
 
   displaySection.appendChild(colorGroup);
+
+  // ── Project title toggle ───────────────────────────────────────────────────
+  const projectTitleRow = buildRow();
+
+  const projectTitleLabel = document.createElement('label');
+  projectTitleLabel.className = 'settings-panel__label';
+  projectTitleLabel.textContent = t('settings.projectTitle');
+
+  const projectTitleCheckbox = document.createElement('input');
+  projectTitleCheckbox.type = 'checkbox';
+  projectTitleCheckbox.className = 'settings-panel__checkbox';
+  projectTitleCheckbox.checked = settings.showProjectTitle;
+  projectTitleCheckbox.addEventListener('change', () => {
+    updateSettings({ showProjectTitle: projectTitleCheckbox.checked });
+    emit('settings-changed');
+  });
+
+  projectTitleLabel.prepend(projectTitleCheckbox);
+  projectTitleRow.appendChild(projectTitleLabel);
+  displaySection.appendChild(projectTitleRow);
 
   // ── Percentage toggle ────────────────────────────────────────────────────────
   const percentageRow = buildRow();

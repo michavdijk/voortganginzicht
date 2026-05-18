@@ -1,16 +1,17 @@
 /**
  * Application settings store.
  *
- * Holds chart generation options: colour scheme, percentage visibility,
- * optional completion checks, optional legend, optional disclaimer, optional
- * actual spending markers, optional project status and optional size indicators.
+ * Holds chart generation options: colour scheme, optional project title,
+ * percentage visibility, optional completion checks, optional legend, optional
+ * disclaimer, optional actual spending markers, optional project status and
+ * optional size indicators.
  * Settings are in-memory only and reset to defaults on page reload.
  */
 
 /** @typedef {{ omvang: number, label: string }} SizeIndicator */
 /** @typedef {{ omvang: number | null, label: string }} EditableSizeIndicator */
 /** @typedef {{ fill: string, bg: string, border: string, text?: string }} ColorPalette */
-/** @typedef {{ showPercentage: boolean, showCompleteCheck: boolean, showLegend: boolean, showDisclaimer: boolean, disclaimerText: string, colorScheme: string, customColor: string, showActualSpending: boolean, showProjectStatus: boolean, showSizeIndicators: boolean, sizeIndicators: EditableSizeIndicator[] }} Settings */
+/** @typedef {{ showProjectTitle: boolean, showPercentage: boolean, showCompleteCheck: boolean, showLegend: boolean, showDisclaimer: boolean, disclaimerText: string, colorScheme: string, customColor: string, showActualSpending: boolean, showProjectStatus: boolean, showSizeIndicators: boolean, sizeIndicators: EditableSizeIndicator[] }} Settings */
 
 export const CUSTOM_COLOR_SCHEME = 'aangepast';
 export const DEFAULT_CUSTOM_COLOR = '#2563EB';
@@ -38,6 +39,7 @@ const MIN_TEXT_CONTRAST_ON_WHITE = 3;
 
 /** @type {Settings} */
 const DEFAULT_SETTINGS = {
+  showProjectTitle: false,
   showPercentage: true,
   showCompleteCheck: false,
   showLegend: false,
@@ -76,6 +78,9 @@ export function updateSettings(patch) {
 
   if ('showPercentage' in patch) {
     _settings.showPercentage = Boolean(patch.showPercentage);
+  }
+  if ('showProjectTitle' in patch) {
+    _settings.showProjectTitle = Boolean(patch.showProjectTitle);
   }
   if ('showCompleteCheck' in patch) {
     _settings.showCompleteCheck = Boolean(patch.showCompleteCheck);

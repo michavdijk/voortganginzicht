@@ -5,6 +5,7 @@
  *   {
  *     "versie": "2",
  *     "instellingen": {
+ *       "showProjectTitle": boolean,
  *       "showPercentage": boolean,
  *       "showCompleteCheck": boolean,
  *       "showLegend": boolean,
@@ -47,6 +48,7 @@ const SCHEMA_VERSION = '2';
 const SUPPORTED_VERSIONS = new Set(['1', '2']);
 
 const DEFAULT_SETTINGS = {
+  showProjectTitle: false,
   showPercentage: true,
   showCompleteCheck: false,
   showLegend: false,
@@ -66,7 +68,7 @@ const DEFAULT_SETTINGS = {
  * Convert the in-memory tree, settings and project name to a JSON string.
  *
  * @param {import('../model/tree.js').Knoop | null} root
- * @param {{ showPercentage: boolean, showCompleteCheck?: boolean, showLegend?: boolean, showDisclaimer?: boolean, disclaimerText?: string, colorScheme: string, customColor?: string, showActualSpending?: boolean, showProjectStatus?: boolean, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }> }} settings
+ * @param {{ showProjectTitle?: boolean, showPercentage: boolean, showCompleteCheck?: boolean, showLegend?: boolean, showDisclaimer?: boolean, disclaimerText?: string, colorScheme: string, customColor?: string, showActualSpending?: boolean, showProjectStatus?: boolean, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }> }} settings
  * @param {string} [projectnaam]
  * @returns {string} JSON string
  */
@@ -75,6 +77,7 @@ export function serialize(root, settings, projectnaam = '') {
     versie: SCHEMA_VERSION,
     projectnaam: projectnaam.trim(),
     instellingen: {
+      showProjectTitle: Boolean(settings.showProjectTitle),
       showPercentage: settings.showPercentage,
       showCompleteCheck: Boolean(settings.showCompleteCheck),
       showLegend: settings.showLegend ?? DEFAULT_SETTINGS.showLegend,
@@ -166,7 +169,7 @@ export function deserialize(jsonString) {
  * Parse and sanitise the instellingen block from a v2 document.
  * Falls back to defaults for missing or invalid values.
  * @param {*} raw
- * @returns {{ showPercentage: boolean, showCompleteCheck: boolean, showLegend: boolean, showDisclaimer: boolean, disclaimerText: string, colorScheme: string, customColor: string, showActualSpending: boolean, showProjectStatus: boolean, showSizeIndicators: boolean, sizeIndicators: Array<{ omvang: number, label: string }> }}
+ * @returns {{ showProjectTitle: boolean, showPercentage: boolean, showCompleteCheck: boolean, showLegend: boolean, showDisclaimer: boolean, disclaimerText: string, colorScheme: string, customColor: string, showActualSpending: boolean, showProjectStatus: boolean, showSizeIndicators: boolean, sizeIndicators: Array<{ omvang: number, label: string }> }}
  */
 function parseInstellingen(raw) {
   if (typeof raw !== 'object' || raw === null) return { ...DEFAULT_SETTINGS };
@@ -174,6 +177,10 @@ function parseInstellingen(raw) {
   const showPercentage = typeof raw.showPercentage === 'boolean'
     ? raw.showPercentage
     : DEFAULT_SETTINGS.showPercentage;
+
+  const showProjectTitle = typeof raw.showProjectTitle === 'boolean'
+    ? raw.showProjectTitle
+    : DEFAULT_SETTINGS.showProjectTitle;
 
   const showCompleteCheck = typeof raw.showCompleteCheck === 'boolean'
     ? raw.showCompleteCheck
@@ -210,6 +217,7 @@ function parseInstellingen(raw) {
   const sizeIndicators = normalizeSizeIndicators(raw.sizeIndicators);
 
   return {
+    showProjectTitle,
     showPercentage,
     showCompleteCheck,
     showLegend,

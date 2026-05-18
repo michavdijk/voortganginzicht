@@ -1186,6 +1186,57 @@
       }
     });
 
+    test('chart renderer can show the project name as a modest report title', () => {
+      const root = makeRoot('Project');
+      const act = addChild(root, 'Activiteit A');
+      setOmvang(act, 5);
+
+      const container = document.createElement('div');
+      container.style.width = '700px';
+      document.body.appendChild(container);
+
+      try {
+        renderChart(container, root, {
+          showProjectTitle: false,
+          projectName: 'Klantportaal 2026',
+          showPercentage: false,
+          colorScheme: 'blauw',
+        });
+        assert(container.querySelector('[data-chart-project-title="true"]') === null, 'Project title should be hidden when disabled');
+        const viewBoxWithoutTitle = container.querySelector('svg').getAttribute('viewBox').split(' ').map(Number);
+
+        renderChart(container, root, {
+          showProjectTitle: true,
+          projectName: 'Klantportaal 2026',
+          showPercentage: false,
+          colorScheme: 'blauw',
+        });
+
+        const title = container.querySelector('[data-chart-project-title="true"]');
+        assert(title !== null, 'Project title should render when enabled');
+        assert(title.textContent === 'Klantportaal 2026');
+        assert(title.getAttribute('font-size') === '21');
+        assert(title.getAttribute('font-weight') === '700');
+        assert(title.getAttribute('fill') === '#2563EB', 'Project title should use the chart primary color');
+
+        const viewBoxWithTitle = container.querySelector('svg').getAttribute('viewBox').split(' ').map(Number);
+        assert(viewBoxWithTitle[3] > viewBoxWithoutTitle[3], 'Title should add vertical room to the report');
+
+        const activityBackground = container.querySelector(`[data-chart-node-id="${act.id}"] .chart-node__border`);
+        assert(Number(activityBackground.getAttribute('y')) > Number(title.getAttribute('y')), 'Chart content should be pushed below the title');
+
+        renderChart(container, root, {
+          showProjectTitle: true,
+          projectName: '   ',
+          showPercentage: false,
+          colorScheme: 'blauw',
+        });
+        assert(container.querySelector('[data-chart-project-title="true"]') === null, 'Empty project names should not render a title');
+      } finally {
+        document.body.removeChild(container);
+      }
+    });
+
     test('chart renderer shows legend only when enabled and only includes actual spending when markers are visible', () => {
       const root = makeRoot('Project');
       const act = addChild(root, 'Activiteit');
@@ -1217,6 +1268,8 @@
       assert(legend.getAttribute('data-actual-spending-legend-row') === 'false');
       assert(legend.querySelector('[data-complete-legend-label="true"]') === null);
       assert(legend.querySelector('[data-actual-spending-legend-label="true"]') === null);
+      assert(legend.querySelector('[data-chart-legend-title="true"]')?.getAttribute('fill') === '#2563EB');
+      assert(legend.querySelector('[data-chart-legend-title="true"]')?.getAttribute('font-weight') === '800');
 
       renderChart(container, root, {
         showPercentage: false,
@@ -1287,6 +1340,8 @@
       let disclaimer = container.querySelector('[data-chart-disclaimer="true"]');
       assert(disclaimer !== null, 'Disclaimer should render when enabled with text');
       assert(disclaimer.querySelector('[data-chart-disclaimer-title="true"]')?.textContent === 'TOELICHTING');
+      assert(disclaimer.querySelector('[data-chart-disclaimer-title="true"]')?.getAttribute('fill') === '#2563EB');
+      assert(disclaimer.querySelector('[data-chart-disclaimer-title="true"]')?.getAttribute('font-weight') === '800');
       assert(disclaimer.textContent.includes('Deze rapportage is een momentopname.'));
       const activityBackground = container.querySelector(`[data-chart-node-id="${act.id}"] .chart-node__border`);
       const activityRight = Number(activityBackground.getAttribute('x')) + Number(activityBackground.getAttribute('width'));
@@ -1861,6 +1916,21 @@
       assert(result.settings.disclaimerText === 'Gebruik deze rapportage als toelichting bij de planning.');
     });
 
+    test('serializer preserves project title setting', () => {
+      const json = serialize(null, {
+        showProjectTitle: true,
+        showPercentage: true,
+        colorScheme: 'blauw',
+      }, 'Titelproject');
+
+      const doc = JSON.parse(json);
+      assert(doc.instellingen.showProjectTitle === true);
+
+      const result = deserialize(json);
+      assert(result.valid === true);
+      assert(result.settings.showProjectTitle === true);
+    });
+
     test('legacy v2 settings without size indicators get defaults', () => {
       const result = deserialize(JSON.stringify({
         versie: '2',
@@ -1870,6 +1940,7 @@
       }));
 
       assert(result.valid === true);
+      assert(result.settings.showProjectTitle === false);
       assert(result.settings.showLegend === false);
       assert(result.settings.showCompleteCheck === false);
       assert(result.settings.showActualSpending === false);
@@ -1915,6 +1986,7 @@
 
     test('resetSettings restores all defaults', () => {
       updateSettings({
+        showProjectTitle: true,
         showPercentage: false,
         showCompleteCheck: true,
         showLegend: true,
@@ -1932,6 +2004,7 @@
       const settings = getSettings();
 
       assert(settings.showPercentage === true);
+      assert(settings.showProjectTitle === false);
       assert(settings.showCompleteCheck === false);
       assert(settings.showLegend === false);
       assert(settings.showDisclaimer === false);
@@ -1968,6 +2041,15 @@
 
       updateSettings({ showActualSpending: false });
       assert(getSettings().showActualSpending === false);
+    });
+
+    test('settings store the project title toggle', () => {
+      resetSettings();
+      updateSettings({ showProjectTitle: true });
+      assert(getSettings().showProjectTitle === true);
+
+      updateSettings({ showProjectTitle: false });
+      assert(getSettings().showProjectTitle === false);
     });
 
     test('settings store the project status toggle', () => {
@@ -2123,6 +2205,29 @@
 
       updateSettings({ showDisclaimer: false });
       assert(getSettings().showDisclaimer === false);
+    });
+
+    test('settings panel stores the project title toggle', () => {
+      resetSettings();
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+
+      try {
+        initSettingsPanel(container);
+        const label = Array.from(container.querySelectorAll('.settings-panel__label'))
+          .find(el => el.textContent.includes('Naam project als titel tonen'));
+        const checkbox = label?.querySelector('input[type="checkbox"]');
+        assert(label !== undefined, 'Project title setting should be visible');
+        assert(checkbox !== null, 'Project title setting should have a checkbox');
+        assert(checkbox.checked === false);
+
+        checkbox.checked = true;
+        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+        assert(getSettings().showProjectTitle === true);
+      } finally {
+        document.body.removeChild(container);
+        resetSettings();
+      }
     });
 
     test('settings panel validates required disclaimer text and shows counter', () => {

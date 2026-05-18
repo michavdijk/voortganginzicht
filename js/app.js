@@ -196,7 +196,7 @@ function autoRender() {
     return;
   }
 
-  renderChart(chartBody, root, { ...settings, chartZoom: _chartZoom });
+  renderChart(chartBody, root, { ...settings, chartZoom: _chartZoom, projectName: getProjectName() });
   _lastRenderWidth = chartBody.clientWidth;
   updateChartZoomControls();
   emit('chart-generated', root);
@@ -567,6 +567,9 @@ function setProjectName(name, options = {}) {
 
   if (options.markChanged && nextName !== previousName) {
     markDirty();
+  }
+  if (nextName !== previousName && getSettings().showProjectTitle) {
+    autoRender();
   }
 }
 

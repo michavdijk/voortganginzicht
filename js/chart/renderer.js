@@ -69,12 +69,18 @@ const FOOTER_BLOCK_GAP = 8;
 const FOOTER_SIDE_PADDING = 16;
 const LEGEND_WIDTH = 180;
 const DISCLAIMER_MIN_WIDTH = 240;
+const PROJECT_TITLE_FONT_SIZE = 21;
+const PROJECT_TITLE_LINE_HEIGHT = 27;
+const PROJECT_TITLE_BOTTOM_GAP = 6;
+const PROJECT_TITLE_FONT_WEIGHT = 700;
+const PROJECT_TITLE_CHAR_WIDTH = 10.8;
 const DISCLAIMER_TEXT_LINE_HEIGHT = 16;
 const DISCLAIMER_TEXT_FONT_SIZE = 12;
 const DISCLAIMER_CHAR_WIDTH = 6.1;
 const EMPTY_DISCLAIMER_LINE = String.fromCharCode(160);
 let disclaimerTextMeasureContext = null;
 let disclaimerSvgMeasure = null;
+let projectTitleTextMeasureContext = null;
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -85,7 +91,7 @@ let disclaimerSvgMeasure = null;
  *
  * @param {HTMLElement} container
  * @param {import('../model/tree.js').Knoop} root
- * @param {{ showPercentage: boolean, showCompleteCheck?: boolean, showLegend?: boolean, showDisclaimer?: boolean, disclaimerText?: string, colorScheme: string, customColor?: string, showActualSpending?: boolean, showProjectStatus?: boolean, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }>, chartZoom?: number }} settings
+ * @param {{ showProjectTitle?: boolean, projectName?: string, showPercentage: boolean, showCompleteCheck?: boolean, showLegend?: boolean, showDisclaimer?: boolean, disclaimerText?: string, colorScheme: string, customColor?: string, showActualSpending?: boolean, showProjectStatus?: boolean, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }>, chartZoom?: number }} settings
  */
 export function renderChart(container, root, settings = { showPercentage: true, colorScheme: 'blauw' }) {
   // Measure available width via a cascade of fallbacks.
@@ -122,19 +128,37 @@ export function renderChart(container, root, settings = { showPercentage: true, 
   const projectStatusBox = projectStatus
     ? boxes.find(box => box.node === root)
     : null;
+  const projectTitle = settings.showProjectTitle
+    ? normalizeProjectTitle(settings.projectName)
+    : '';
+  const projectTitleLines = projectTitle
+    ? wrapProjectTitleToWidth(projectTitle, Math.max(1, totalWidth - 2 * FOOTER_SIDE_PADDING))
+    : [];
+  const projectTitleOffset = projectTitleLines.length > 0
+    ? calculateProjectTitleOffset(projectTitleLines)
+    : 0;
+  if (projectTitleOffset > 0) {
+    shiftChartLayoutY(boxes, connectors, sizeGuide, sizeIndicators, projectTitleOffset);
+  }
+  const baseTotalHeight = totalHeight + projectTitleOffset;
+  const chartBottomY = chartBottom + projectTitleOffset;
 
   const svg = createEl('svg');
   svg.setAttribute('xmlns',   SVG_NS);
-  svg.setAttribute('viewBox', `0 0 ${totalWidth} ${totalHeight}`);
+  svg.setAttribute('viewBox', `0 0 ${totalWidth} ${baseTotalHeight}`);
   // Keep pixel dimensions as attributes so PNG export gets the right size.
   // CSS overrides these for display: width fills container, height follows
   // the viewBox aspect ratio (no letterboxing, no distortion).
   svg.setAttribute('width',  String(totalWidth));
-  svg.setAttribute('height', String(totalHeight));
+  svg.setAttribute('height', String(baseTotalHeight));
   svg.style.fontFamily = FONT_FAMILY;
   svg.style.display    = 'block';
   svg.style.width      = '100%';
   svg.style.height     = 'auto';
+
+  if (projectTitleLines.length > 0) {
+    svg.appendChild(buildProjectTitle(totalWidth, projectTitleLines, palette));
+  }
 
   // Size indicators and connectors are drawn first so boxes render on top.
   for (const indicator of sizeIndicators) {
@@ -162,12 +186,12 @@ export function renderChart(container, root, settings = { showPercentage: true, 
   const legendRows = 1 + (showCompleteLegendRow ? 1 : 0) + (showActualSpendingLegendRow ? 1 : 0);
   const legendHeight = 36 + legendRows * 24;
   let extendedTotalWidth = totalWidth;
-  let extendedTotalHeight = totalHeight;
+  let extendedTotalHeight = baseTotalHeight;
 
   if (showLegend || showDisclaimer) {
     const footerY = sizeGuide
       ? sizeGuide.y + SIZE_GUIDE_HEIGHT + 8
-      : chartBottom + 24;
+      : chartBottomY + 24;
     const footerX = FOOTER_SIDE_PADDING;
     let footerRight = Math.max(getFooterRightEdge(boxes), footerX + (showLegend ? LEGEND_WIDTH : DISCLAIMER_MIN_WIDTH));
     let legendX = null;
@@ -194,7 +218,7 @@ export function renderChart(container, root, settings = { showPercentage: true, 
     );
 
     if (showDisclaimer) {
-      svg.appendChild(buildDisclaimer(disclaimerX, footerY, disclaimerWidth, footerHeight, disclaimerText));
+      svg.appendChild(buildDisclaimer(disclaimerX, footerY, disclaimerWidth, footerHeight, disclaimerText, palette));
     }
     if (showLegend) {
       svg.appendChild(buildLegend(legendX, footerY, LEGEND_WIDTH, footerHeight, palette, {
@@ -273,6 +297,102 @@ function getFooterRightEdge(boxes) {
   const activiteitBoxes = boxes.filter(box => box.node.kinderen.length === 0);
   const footerBoxes = activiteitBoxes.length > 0 ? activiteitBoxes : boxes;
   return Math.max(...footerBoxes.map(box => box.x + box.width));
+}
+
+function shiftChartLayoutY(boxes, connectors, sizeGuide, sizeIndicators, dy) {
+  for (const box of boxes) {
+    box.y += dy;
+  }
+  for (const connector of connectors) {
+    connector.y1 += dy;
+    connector.y2 += dy;
+  }
+  if (sizeGuide) {
+    sizeGuide.y += dy;
+  }
+  for (const indicator of sizeIndicators) {
+    indicator.y1 += dy;
+    indicator.y2 += dy;
+    indicator.labelY += dy;
+  }
+}
+
+function normalizeProjectTitle(raw) {
+  return typeof raw === 'string' ? raw.trim() : '';
+}
+
+function calculateProjectTitleOffset(lines) {
+  const lastBaseline = PROJECT_TITLE_FONT_SIZE + (lines.length - 1) * PROJECT_TITLE_LINE_HEIGHT;
+  return lastBaseline + PROJECT_TITLE_BOTTOM_GAP;
+}
+
+function buildProjectTitle(width, lines, palette) {
+  const text = createEl('text');
+  text.setAttribute('data-chart-project-title', 'true');
+  setAttrs(text, {
+    x: width / 2,
+    y: PROJECT_TITLE_FONT_SIZE,
+    fill: palette.fill,
+    'font-size': PROJECT_TITLE_FONT_SIZE,
+    'font-weight': PROJECT_TITLE_FONT_WEIGHT,
+    'text-anchor': 'middle',
+  });
+
+  lines.forEach((line, index) => {
+    const tspan = createEl('tspan');
+    tspan.setAttribute('x', width / 2);
+    if (index > 0) tspan.setAttribute('dy', String(PROJECT_TITLE_LINE_HEIGHT));
+    tspan.textContent = line;
+    text.appendChild(tspan);
+  });
+
+  return text;
+}
+
+function wrapProjectTitleToWidth(text, maxLineWidth) {
+  if (maxLineWidth <= 0) return [text];
+
+  const words = String(text).split(/\s+/).filter(Boolean);
+  const lines = [];
+  let current = '';
+
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (measureProjectTitleText(candidate) <= maxLineWidth) {
+      current = candidate;
+    } else if (current) {
+      lines.push(current);
+      current = word;
+    } else {
+      lines.push(word);
+      current = '';
+    }
+  }
+
+  if (current) lines.push(current);
+  return lines.length > 0 ? lines : [''];
+}
+
+function measureProjectTitleText(text) {
+  const context = getProjectTitleTextMeasureContext();
+  if (context) return context.measureText(text).width;
+  return String(text).length * PROJECT_TITLE_CHAR_WIDTH;
+}
+
+function getProjectTitleTextMeasureContext() {
+  if (projectTitleTextMeasureContext) return projectTitleTextMeasureContext;
+
+  if (typeof document !== 'undefined') {
+    projectTitleTextMeasureContext = document.createElement('canvas').getContext('2d');
+  } else if (typeof OffscreenCanvas !== 'undefined') {
+    projectTitleTextMeasureContext = new OffscreenCanvas(1, 1).getContext('2d');
+  }
+
+  if (projectTitleTextMeasureContext) {
+    projectTitleTextMeasureContext.font = `${PROJECT_TITLE_FONT_WEIGHT} ${PROJECT_TITLE_FONT_SIZE}px ${FONT_FAMILY}`;
+  }
+
+  return projectTitleTextMeasureContext;
 }
 
 // ── Box builder ───────────────────────────────────────────────────────────────
@@ -732,13 +852,14 @@ function buildLegend(x, y, width, height, palette, { showComplete, showActualSpe
   g.appendChild(background);
 
   const title = createEl('text');
+  title.setAttribute('data-chart-legend-title', 'true');
   setAttrs(title, {
     x: x + 12,
     y: y + 16,
-    fill: COLOR_TEXT_DARK,
+    fill: palette.fill,
     'font-size': 11,
     'font-family': FONT_FAMILY,
-    'font-weight': 700,
+    'font-weight': 800,
   });
   title.textContent = t('chart.legend.title').toUpperCase();
   g.appendChild(title);
@@ -894,7 +1015,7 @@ function calculateDisclaimerHeight(text, width) {
   return 36 + (lines.length * DISCLAIMER_TEXT_LINE_HEIGHT) + 14;
 }
 
-function buildDisclaimer(x, y, width, height, text) {
+function buildDisclaimer(x, y, width, height, text, palette) {
   const g = createEl('g');
   g.setAttribute('data-chart-disclaimer', 'true');
 
@@ -917,10 +1038,10 @@ function buildDisclaimer(x, y, width, height, text) {
   setAttrs(title, {
     x: x + 12,
     y: y + 16,
-    fill: COLOR_TEXT_DARK,
+    fill: palette.fill,
     'font-size': 11,
     'font-family': FONT_FAMILY,
-    'font-weight': 700,
+    'font-weight': 800,
   });
   title.textContent = t('chart.disclaimer.title').toUpperCase();
   g.appendChild(title);
