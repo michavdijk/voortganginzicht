@@ -201,17 +201,23 @@ function buildEmailIcon() {
   svg.setAttribute('aria-hidden', 'true');
   svg.setAttribute('focusable', 'false');
 
-  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-  rect.setAttribute('x', '3');
-  rect.setAttribute('y', '5');
-  rect.setAttribute('width', '18');
-  rect.setAttribute('height', '14');
-  rect.setAttribute('rx', '2');
+  const outline = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  outline.setAttribute('x', '4');
+  outline.setAttribute('y', '6');
+  outline.setAttribute('width', '16');
+  outline.setAttribute('height', '12');
+  outline.setAttribute('rx', '2.5');
 
-  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  path.setAttribute('d', 'm3 7 9 6 9-6');
+  const flap = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  flap.setAttribute('d', 'M4.8 8.1 11 13.05a1.6 1.6 0 0 0 2 0l6.2-4.95');
 
-  svg.append(rect, path);
+  const leftFold = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  leftFold.setAttribute('d', 'm9.5 12.15-4.7 4.3');
+
+  const rightFold = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  rightFold.setAttribute('d', 'm14.5 12.15 4.7 4.3');
+
+  svg.append(outline, flap, leftFold, rightFold);
   return svg;
 }
 
