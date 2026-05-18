@@ -169,25 +169,20 @@ export function renderChart(container, root, settings = { showPercentage: true, 
       ? sizeGuide.y + SIZE_GUIDE_HEIGHT + 8
       : chartBottom + 24;
     const footerX = FOOTER_SIDE_PADDING;
-    let footerRight = Math.max(totalWidth - FOOTER_SIDE_PADDING, footerX + LEGEND_WIDTH);
+    let footerRight = Math.max(getFooterRightEdge(boxes), footerX + (showLegend ? LEGEND_WIDTH : DISCLAIMER_MIN_WIDTH));
     let legendX = null;
     let disclaimerX = null;
     let disclaimerWidth = 0;
 
     if (showLegend && showDisclaimer) {
-      footerRight = Math.max(
-        footerRight,
-        footerX + DISCLAIMER_MIN_WIDTH + FOOTER_BLOCK_GAP + LEGEND_WIDTH
-      );
       legendX = footerRight - LEGEND_WIDTH;
       disclaimerX = footerX;
-      disclaimerWidth = Math.max(DISCLAIMER_MIN_WIDTH, legendX - FOOTER_BLOCK_GAP - disclaimerX);
+      disclaimerWidth = Math.max(1, legendX - FOOTER_BLOCK_GAP - disclaimerX);
     } else if (showLegend) {
       legendX = Math.max(footerRight - LEGEND_WIDTH, footerX);
     } else {
-      footerRight = Math.max(footerRight, footerX + DISCLAIMER_MIN_WIDTH);
       disclaimerX = footerX;
-      disclaimerWidth = Math.max(DISCLAIMER_MIN_WIDTH, footerRight - disclaimerX);
+      disclaimerWidth = Math.max(1, footerRight - disclaimerX);
     }
 
     const disclaimerHeight = showDisclaimer
@@ -272,6 +267,12 @@ function canRenderCompleteIndicator(box) {
     titleHeight >= COMPLETE_ICON_SIZE + 4 &&
     box.width > 2 * TEXT_H_PADDING + COMPLETE_ICON_SIZE
   );
+}
+
+function getFooterRightEdge(boxes) {
+  const activiteitBoxes = boxes.filter(box => box.node.kinderen.length === 0);
+  const footerBoxes = activiteitBoxes.length > 0 ? activiteitBoxes : boxes;
+  return Math.max(...footerBoxes.map(box => box.x + box.width));
 }
 
 // ── Box builder ───────────────────────────────────────────────────────────────

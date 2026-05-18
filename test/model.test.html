@@ -1229,11 +1229,32 @@
       assert(legend.getAttribute('data-complete-legend-row') === 'false');
       assert(legend.getAttribute('data-actual-spending-legend-row') === 'true');
       assert(legend.querySelector('[data-actual-spending-legend-label="true"]') !== null);
-      const svg = container.querySelector('svg');
-      const viewBoxWidth = Number(svg.getAttribute('viewBox').split(' ')[2]);
-      const legendBackground = legend.querySelector('rect');
-      const legendRight = Number(legendBackground.getAttribute('x')) + Number(legendBackground.getAttribute('width'));
+      let svg = container.querySelector('svg');
+      let viewBoxWidth = Number(svg.getAttribute('viewBox').split(' ')[2]);
+      let legendBackground = legend.querySelector('rect');
+      let legendRight = Number(legendBackground.getAttribute('x')) + Number(legendBackground.getAttribute('width'));
+      let activityBackground = container.querySelector(`[data-chart-node-id="${act.id}"] .chart-node__border`);
+      let activityRight = Number(activityBackground.getAttribute('x')) + Number(activityBackground.getAttribute('width'));
+      assertNear(legendRight, activityRight, 'Legend should align to the widest activity right edge');
       assert(legendRight <= viewBoxWidth, 'Legend should fit inside the SVG viewBox');
+
+      renderChart(container, root, {
+        showPercentage: false,
+        showLegend: true,
+        colorScheme: 'blauw',
+        showActualSpending: true,
+        showSizeIndicators: true,
+        sizeIndicators: [{ omvang: 8, label: 'Max' }],
+      });
+      legend = container.querySelector('[data-chart-legend="true"]');
+      svg = container.querySelector('svg');
+      viewBoxWidth = Number(svg.getAttribute('viewBox').split(' ')[2]);
+      legendBackground = legend.querySelector('rect');
+      legendRight = Number(legendBackground.getAttribute('x')) + Number(legendBackground.getAttribute('width'));
+      activityBackground = container.querySelector(`[data-chart-node-id="${act.id}"] .chart-node__border`);
+      activityRight = Number(activityBackground.getAttribute('x')) + Number(activityBackground.getAttribute('width'));
+      assertNear(legendRight, activityRight, 'Legend should keep aligning to the activity when size indicators are shown');
+      assert(legendRight <= viewBoxWidth, 'Legend with size indicators should fit inside the SVG viewBox');
 
       document.body.removeChild(container);
     });
@@ -1267,10 +1288,11 @@
       assert(disclaimer !== null, 'Disclaimer should render when enabled with text');
       assert(disclaimer.querySelector('[data-chart-disclaimer-title="true"]')?.textContent === 'TOELICHTING');
       assert(disclaimer.textContent.includes('Deze rapportage is een momentopname.'));
-      let svg = container.querySelector('svg');
-      let viewBoxWidth = Number(svg.getAttribute('viewBox').split(' ')[2]);
+      const activityBackground = container.querySelector(`[data-chart-node-id="${act.id}"] .chart-node__border`);
+      const activityRight = Number(activityBackground.getAttribute('x')) + Number(activityBackground.getAttribute('width'));
       let disclaimerBackground = disclaimer.querySelector('rect');
-      assert(Number(disclaimerBackground.getAttribute('width')) === viewBoxWidth - 32, 'Disclaimer should use the available footer width when legend is hidden');
+      const disclaimerRight = Number(disclaimerBackground.getAttribute('x')) + Number(disclaimerBackground.getAttribute('width'));
+      assertNear(disclaimerRight, activityRight, 'Disclaimer should align to the widest activity right edge when legend is hidden');
 
       renderChart(container, root, {
         showPercentage: false,
@@ -1327,9 +1349,11 @@
       assert(Number(legendBackground.getAttribute('width')) === 180, 'Legend should keep its fixed width');
       assert(Number(disclaimerBackground.getAttribute('width')) > Number(legendBackground.getAttribute('width')));
 
-      const disclaimerRight = Number(disclaimerBackground.getAttribute('x')) + Number(disclaimerBackground.getAttribute('width'));
+      const combinedDisclaimerRight = Number(disclaimerBackground.getAttribute('x')) + Number(disclaimerBackground.getAttribute('width'));
       const legendX = Number(legendBackground.getAttribute('x'));
-      assert(disclaimerRight < legendX, 'Disclaimer should leave space before the legend');
+      const legendRight = legendX + Number(legendBackground.getAttribute('width'));
+      assert(combinedDisclaimerRight < legendX, 'Disclaimer should leave space before the legend');
+      assertNear(legendRight, activityRight, 'Legend should align to the widest activity right edge');
 
       document.body.removeChild(container);
     });
