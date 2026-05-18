@@ -27,21 +27,14 @@ import { canCopyChartToClipboard, chartSvgToPngBlob, copyChartToClipboard } from
 import { t } from './i18n.js';
 
 const PROJECT_NAME_MAX_LENGTH = 100;
-const PHONE_MAX_SHORT_SIDE = 600;
+const MOBILE_PANEL_QUERY = '(max-width: 700px)';
 const CHART_ZOOM_LEVELS = [0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2];
 let appInitialized = false;
-let appShell = null;
-let originalBodyClass = '';
 let _chartZoom = 1;
+let _activeMobilePanel = 'tree';
+let _mobilePanelMedia = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (isPhoneLikeViewport()) {
-    appShell = Array.from(document.body.childNodes);
-    originalBodyClass = document.body.className;
-    renderPhoneUnsupportedMessage();
-    return;
-  }
-
   initApplication();
 });
 
@@ -71,6 +64,7 @@ function initApplication() {
   initTreePanelToggle();
   initSettingsDrawer();
   initChartZoomControls();
+  initMobilePanelNav();
   initProjectNameTitle();
   initVersionInfo();
   applyStaticTranslations();
@@ -81,7 +75,13 @@ function initApplication() {
   on('settings-changed',  autoRender);
   on('tree-changed',      scheduleRender);
   on('language-changed',  autoRender);
-  on('chart-node-selected', () => setTreePanelCollapsed(false));
+  on('chart-node-selected', () => {
+    if (isMobilePanelLayout()) {
+      setMobilePanel('tree');
+    } else {
+      setTreePanelCollapsed(false);
+    }
+  });
 
   // Re-render on window resize (debounced, width-change only).
   window.addEventListener('resize', scheduleResizeRender);
@@ -100,63 +100,6 @@ function initApplication() {
   window.addEventListener('beforeunload', (e) => {
     if (isDirty()) e.preventDefault();
   });
-}
-
-function isPhoneLikeViewport() {
-  const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
-  const shortSide = Math.min(window.innerWidth, window.innerHeight);
-  return coarsePointer && shortSide < PHONE_MAX_SHORT_SIDE;
-}
-
-function renderPhoneUnsupportedMessage() {
-  document.documentElement.lang = t('app.doc.lang');
-  document.body.innerHTML = '';
-  document.body.className = 'mobile-unsupported-page';
-
-  const main = document.createElement('main');
-  main.className = 'mobile-unsupported';
-  main.setAttribute('role', 'main');
-
-  const logo = document.createElement('img');
-  logo.className = 'mobile-unsupported__logo';
-  logo.src = 'assets/logo.svg';
-  logo.width = 520;
-  logo.height = 64;
-  logo.alt = 'voortganginzicht.nl';
-
-  const message = document.createElement('div');
-  message.className = 'mobile-unsupported__message';
-
-  const nlMessage = document.createElement('p');
-  nlMessage.lang = 'nl';
-  nlMessage.textContent = t('app.mobileUnsupported.nl');
-
-  const enMessage = document.createElement('p');
-  enMessage.lang = 'en';
-  enMessage.textContent = t('app.mobileUnsupported.en');
-
-  message.append(nlMessage, enMessage);
-
-  const continueButton = document.createElement('button');
-  continueButton.type = 'button';
-  continueButton.className = 'btn btn--primary mobile-unsupported__continue';
-  continueButton.textContent = `${t('app.mobileUnsupported.continue.nl')} / ${t('app.mobileUnsupported.continue.en')}`;
-  continueButton.addEventListener('click', continueToApplication);
-
-  main.append(logo, message, continueButton);
-  document.body.appendChild(main);
-}
-
-function continueToApplication() {
-  if (!appShell) return;
-
-  document.body.innerHTML = '';
-  document.body.className = originalBodyClass;
-  for (const node of appShell) {
-    document.body.appendChild(node);
-  }
-
-  initApplication();
 }
 
 // ── Auto-render ──────────────────────────────────────────────────────────────
@@ -364,27 +307,50 @@ function initSettingsDrawer() {
 
   if (!drawer || !toggleBtn || !closeBtn) return;
 
-  const setOpen = (open, focusToggle = false) => {
-    drawer.hidden = !open;
-    toggleBtn.classList.toggle('settings-drawer-toggle--active', open);
-    toggleBtn.setAttribute('aria-expanded', String(open));
-    updateSettingsDrawerLabels();
-
-    if (focusToggle) toggleBtn.focus();
-
-    // The chart width changes when the desktop drawer opens or closes.
-    requestAnimationFrame(autoRender);
-  };
-
-  toggleBtn.addEventListener('click', () => setOpen(drawer.hidden));
-  closeBtn.addEventListener('click', () => setOpen(false, true));
+  toggleBtn.addEventListener('click', () => {
+    if (isMobilePanelLayout()) {
+      setMobilePanel('settings');
+      return;
+    }
+    setSettingsDrawerOpen(drawer.hidden);
+  });
+  closeBtn.addEventListener('click', () => {
+    if (isMobilePanelLayout()) {
+      setMobilePanel('chart', { focusTab: true });
+      return;
+    }
+    setSettingsDrawerOpen(false, true);
+  });
 
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape' || drawer.hidden || document.body.classList.contains('help-panel-open')) return;
-    setOpen(false, true);
+    if (isMobilePanelLayout()) {
+      setMobilePanel('chart', { focusTab: true });
+    } else {
+      setSettingsDrawerOpen(false, true);
+    }
   });
 
-  setOpen(false);
+  setSettingsDrawerOpen(false);
+}
+
+function setSettingsDrawerOpen(open, focusToggle = false) {
+  const drawer    = document.getElementById('settings-drawer');
+  const toggleBtn = document.getElementById('settings-drawer-toggle');
+  if (!drawer || !toggleBtn) return;
+
+  const wasOpen = !drawer.hidden;
+  drawer.hidden = !open;
+  toggleBtn.classList.toggle('settings-drawer-toggle--active', open);
+  toggleBtn.setAttribute('aria-expanded', String(open));
+  updateSettingsDrawerLabels();
+
+  if (focusToggle) toggleBtn.focus();
+
+  // The chart width changes when the desktop drawer opens or closes.
+  if (!isMobilePanelLayout() && wasOpen !== open) {
+    requestAnimationFrame(autoRender);
+  }
 }
 
 function updateSettingsDrawerLabels() {
@@ -409,6 +375,99 @@ function updateSettingsDrawerLabels() {
   }
 }
 
+// ── Mobile panel navigation ─────────────────────────────────────────────────
+
+function initMobilePanelNav() {
+  const nav = document.getElementById('mobile-panel-nav');
+  if (!nav) return;
+
+  if (!_mobilePanelMedia && typeof window.matchMedia === 'function') {
+    _mobilePanelMedia = window.matchMedia(MOBILE_PANEL_QUERY);
+  }
+
+  nav.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-mobile-panel]');
+    if (!button || !nav.contains(button)) return;
+    setMobilePanel(button.dataset.mobilePanel);
+  });
+
+  if (_mobilePanelMedia?.addEventListener) {
+    _mobilePanelMedia.addEventListener('change', syncMobilePanelLayout);
+  } else {
+    _mobilePanelMedia?.addListener?.(syncMobilePanelLayout);
+  }
+  updateMobilePanelNavLabels();
+  syncMobilePanelLayout();
+}
+
+function isMobilePanelLayout() {
+  if (_mobilePanelMedia) return _mobilePanelMedia.matches;
+  if (typeof window.matchMedia === 'function') {
+    return window.matchMedia(MOBILE_PANEL_QUERY).matches;
+  }
+  return window.innerWidth <= 700;
+}
+
+function setMobilePanel(panel, options = {}) {
+  if (!['tree', 'chart', 'settings'].includes(panel)) return;
+
+  _activeMobilePanel = panel;
+  applyMobilePanelState(options);
+}
+
+function syncMobilePanelLayout() {
+  const isMobile = isMobilePanelLayout();
+  document.body.classList.toggle('app-mobile-panels', isMobile);
+  applyMobilePanelState();
+}
+
+function applyMobilePanelState(options = {}) {
+  const isMobile = isMobilePanelLayout();
+  document.body.classList.toggle('mobile-panel--tree', isMobile && _activeMobilePanel === 'tree');
+  document.body.classList.toggle('mobile-panel--chart', isMobile && _activeMobilePanel === 'chart');
+  document.body.classList.toggle('mobile-panel--settings', isMobile && _activeMobilePanel === 'settings');
+
+  const nav = document.getElementById('mobile-panel-nav');
+  const buttons = nav?.querySelectorAll('[data-mobile-panel]') ?? [];
+  buttons.forEach((button) => {
+    const isActive = isMobile && button.dataset.mobilePanel === _activeMobilePanel;
+    button.classList.toggle('mobile-panel-nav__button--active', isActive);
+    button.setAttribute('aria-selected', String(isActive));
+  });
+
+  if (!isMobile) return;
+
+  if (_activeMobilePanel === 'settings') {
+    setSettingsDrawerOpen(true);
+  } else {
+    setSettingsDrawerOpen(false);
+  }
+
+  if (_activeMobilePanel === 'chart') {
+    requestAnimationFrame(autoRender);
+  }
+
+  if (options.focusTab) {
+    nav?.querySelector(`[data-mobile-panel="${_activeMobilePanel}"]`)?.focus();
+  }
+}
+
+function updateMobilePanelNavLabels() {
+  const nav = document.getElementById('mobile-panel-nav');
+  if (!nav) return;
+
+  nav.setAttribute('aria-label', t('mobile.nav.label'));
+
+  nav.querySelectorAll('[data-mobile-panel]').forEach((button) => {
+    const panel = button.dataset.mobilePanel;
+    const label = t(`mobile.nav.${panel}`);
+    const labelEl = button.querySelector('.mobile-panel-nav__label');
+    if (labelEl) labelEl.textContent = label;
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  });
+}
+
 // ── Toolbar action handlers ──────────────────────────────────────────────────
 
 async function handleNewProject() {
@@ -422,6 +481,7 @@ async function handleNewProject() {
   refreshSettingsPanel();
   newProject();
   setTreePanelCollapsed(false);
+  if (isMobilePanelLayout()) setMobilePanel('tree');
   setProjectName(trimmedName);
   if (trimmedName) markDirty();
   showSuccess(t('success.newProject'));
@@ -450,6 +510,7 @@ async function handleLoad() {
   refreshSettingsPanel();
   setProjectName(result.projectnaam || '');
   setTreePanelCollapsed(false);
+  if (isMobilePanelLayout()) setMobilePanel('tree');
   markClean();
   emit('project-loaded', result.root);
   showSuccess(t('success.opened'));
@@ -477,7 +538,7 @@ async function handleSave() {
 }
 
 async function handleDownload() {
-  const svg = getCurrentChartSvg();
+  const svg = await prepareCurrentChartSvg();
 
   if (!svg) {
     showError(t('error.noChart'));
@@ -510,7 +571,7 @@ async function handleDownload() {
 }
 
 async function handleCopyReport() {
-  const svg = getCurrentChartSvg();
+  const svg = await prepareCurrentChartSvg();
 
   if (!svg) {
     showError(t('error.noChart'));
@@ -530,9 +591,22 @@ async function handleCopyReport() {
   }
 }
 
+async function prepareCurrentChartSvg() {
+  if (isMobilePanelLayout() && _activeMobilePanel !== 'chart') {
+    setMobilePanel('chart');
+    await nextAnimationFrame();
+  }
+
+  return getCurrentChartSvg();
+}
+
 function getCurrentChartSvg() {
   const chartBody = document.querySelector('#chart-panel .panel__body');
   return chartBody ? chartBody._chartSvg : null;
+}
+
+function nextAnimationFrame() {
+  return new Promise(resolve => requestAnimationFrame(resolve));
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -636,6 +710,7 @@ function applyStaticTranslations() {
   updateTreePanelToggleLabels();
   updateChartZoomControls();
   updateSettingsDrawerLabels();
+  updateMobilePanelNavLabels();
 }
 
 function refreshSettingsPanel() {

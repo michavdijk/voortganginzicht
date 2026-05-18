@@ -16,12 +16,6 @@ const SUPPORTED = ['nl', 'en'];
 const translations = {
   nl: {
     'app.doc.lang':                     'nl',
-    'app.mobileUnsupported.nl':         'Deze tool is niet geschikt voor gebruik op een mobiele telefoon. Open deze pagina op een desktop of laptop voor de beste ervaring.',
-    'app.mobileUnsupported':            'Deze tool is niet geschikt voor gebruik op een mobiele telefoon. Open deze pagina op een desktop of laptop voor de beste ervaring.',
-    'app.mobileUnsupported.en':         'This tool is not suitable for use on a mobile phone. Open this page on a desktop or laptop for the best experience.',
-    'app.mobileUnsupported.continue.nl': 'Toch doorgaan',
-    'app.mobileUnsupported.continue.en': 'Continue anyway',
-
     'panel.tree.ariaLabel':             'Boomstructuur',
     'panel.tree.header':                'Werkstructuur',
     'panel.tree.collapse':              'Werkstructuur inklappen',
@@ -29,6 +23,10 @@ const translations = {
     'panel.settings.header':            'Instellingen',
     'panel.chart.ariaLabel':            'Voortgangsrapport',
     'panel.chart.header':               'Voortgangsrapport',
+    'mobile.nav.label':                 'Mobiele paneelnavigatie',
+    'mobile.nav.tree':                  'Werkstructuur',
+    'mobile.nav.chart':                 'Rapportage',
+    'mobile.nav.settings':              'Instellingen',
     'chart.placeholder':                'Vul de werkstructuur in — het voortgangsrapport verschijnt automatisch.',
     'chart.placeholder.empty':          'Maak een doel aan om het voortgangsrapport op te bouwen.',
     'chart.placeholder.noActivities':   'Voeg minimaal één activiteit toe aan de werkstructuur.',
@@ -275,12 +273,6 @@ const translations = {
   },
   en: {
     'app.doc.lang':                     'en',
-    'app.mobileUnsupported.nl':         'Deze tool is niet geschikt voor gebruik op een mobiele telefoon. Open deze pagina op een desktop of laptop voor de beste ervaring.',
-    'app.mobileUnsupported':            'This tool is not suitable for use on a mobile phone. Open this page on a desktop or laptop for the best experience.',
-    'app.mobileUnsupported.en':         'This tool is not suitable for use on a mobile phone. Open this page on a desktop or laptop for the best experience.',
-    'app.mobileUnsupported.continue.nl': 'Toch doorgaan',
-    'app.mobileUnsupported.continue.en': 'Continue anyway',
-
     'panel.tree.ariaLabel':             'Tree structure',
     'panel.tree.header':                'Work structure',
     'panel.tree.collapse':              'Collapse work structure',
@@ -288,6 +280,10 @@ const translations = {
     'panel.settings.header':            'Settings',
     'panel.chart.ariaLabel':            'Progress report',
     'panel.chart.header':               'Progress report',
+    'mobile.nav.label':                 'Mobile panel navigation',
+    'mobile.nav.tree':                  'Structure',
+    'mobile.nav.chart':                 'Report',
+    'mobile.nav.settings':              'Settings',
     'chart.placeholder':                'Fill in the work structure — the progress report appears automatically.',
     'chart.placeholder.empty':          'Create a goal to build the progress report.',
     'chart.placeholder.noActivities':   'Add at least one activity to the work structure.',
