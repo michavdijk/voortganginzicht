@@ -67,6 +67,10 @@ const PROJECT_STATUS_SUFFIX_GAP = 2;
 const PROJECT_STATUS_CHAR_WIDTH = 6.3;
 const FOOTER_BLOCK_GAP = 8;
 const FOOTER_SIDE_PADDING = 16;
+const FOOTER_TITLE_Y_OFFSET = 15;
+const FOOTER_CONTENT_Y_OFFSET = 34;
+const FOOTER_BOTTOM_PADDING = 14;
+const LEGEND_ROW_GAP = 22;
 const LEGEND_WIDTH = 180;
 const DISCLAIMER_MIN_WIDTH = 240;
 const PROJECT_TITLE_FONT_SIZE = 21;
@@ -184,7 +188,7 @@ export function renderChart(container, root, settings = { showPercentage: true, 
   const showActualSpendingLegendRow = Boolean(settings.showActualSpending) &&
     boxes.some(box => canRenderActualSpendingMarker(box, Boolean(settings.showPercentage)));
   const legendRows = 1 + (showCompleteLegendRow ? 1 : 0) + (showActualSpendingLegendRow ? 1 : 0);
-  const legendHeight = 36 + legendRows * 24;
+  const legendHeight = FOOTER_CONTENT_Y_OFFSET + (legendRows - 1) * LEGEND_ROW_GAP + FOOTER_BOTTOM_PADDING;
   let extendedTotalWidth = totalWidth;
   let extendedTotalHeight = baseTotalHeight;
 
@@ -855,7 +859,7 @@ function buildLegend(x, y, width, height, palette, { showComplete, showActualSpe
   title.setAttribute('data-chart-legend-title', 'true');
   setAttrs(title, {
     x: x + 12,
-    y: y + 16,
+    y: y + FOOTER_TITLE_Y_OFFSET,
     fill: palette.fill,
     'font-size': 11,
     'font-family': FONT_FAMILY,
@@ -866,7 +870,7 @@ function buildLegend(x, y, width, height, palette, { showComplete, showActualSpe
 
   const leftColumnX = x + 12;
   const rightColumnX = x + 56;
-  let rowY = y + 34;
+  let rowY = y + FOOTER_CONTENT_Y_OFFSET;
 
   const progressLabel = createEl('text');
   setAttrs(progressLabel, {
@@ -908,7 +912,7 @@ function buildLegend(x, y, width, height, palette, { showComplete, showActualSpe
     fill: palette.fill,
   });
   g.appendChild(fill);
-  rowY += 24;
+  rowY += LEGEND_ROW_GAP;
 
   if (showComplete) {
     const markerX = leftColumnX + barWidth / 2;
@@ -954,7 +958,7 @@ function buildLegend(x, y, width, height, palette, { showComplete, showActualSpe
     label.textContent = t('chart.complete.legend');
     g.appendChild(label);
 
-    rowY += 24;
+    rowY += LEGEND_ROW_GAP;
   }
 
   if (showActualSpending) {
@@ -1012,7 +1016,7 @@ function buildLegend(x, y, width, height, palette, { showComplete, showActualSpe
 
 function calculateDisclaimerHeight(text, width) {
   const lines = wrapDisclaimerText(text, width);
-  return 36 + (lines.length * DISCLAIMER_TEXT_LINE_HEIGHT) + 14;
+  return FOOTER_CONTENT_Y_OFFSET + (lines.length - 1) * DISCLAIMER_TEXT_LINE_HEIGHT + FOOTER_BOTTOM_PADDING;
 }
 
 function buildDisclaimer(x, y, width, height, text, palette) {
@@ -1037,7 +1041,7 @@ function buildDisclaimer(x, y, width, height, text, palette) {
   title.setAttribute('data-chart-disclaimer-title', 'true');
   setAttrs(title, {
     x: x + 12,
-    y: y + 16,
+    y: y + FOOTER_TITLE_Y_OFFSET,
     fill: palette.fill,
     'font-size': 11,
     'font-family': FONT_FAMILY,
@@ -1050,7 +1054,7 @@ function buildDisclaimer(x, y, width, height, text, palette) {
   body.setAttribute('data-chart-disclaimer-text', 'true');
   setAttrs(body, {
     x: x + 12,
-    y: y + 38,
+    y: y + FOOTER_CONTENT_Y_OFFSET,
     fill: COLOR_TEXT_DARK,
     'font-size': DISCLAIMER_TEXT_FONT_SIZE,
     'font-family': FONT_FAMILY,

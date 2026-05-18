@@ -1270,6 +1270,7 @@
       assert(legend.querySelector('[data-actual-spending-legend-label="true"]') === null);
       assert(legend.querySelector('[data-chart-legend-title="true"]')?.getAttribute('fill') === '#2563EB');
       assert(legend.querySelector('[data-chart-legend-title="true"]')?.getAttribute('font-weight') === '800');
+      assert(Number(legend.querySelector('rect').getAttribute('height')) <= 52, 'Single-row legend should stay compact');
 
       renderChart(container, root, {
         showPercentage: false,
@@ -1348,6 +1349,7 @@
       let disclaimerBackground = disclaimer.querySelector('rect');
       const disclaimerRight = Number(disclaimerBackground.getAttribute('x')) + Number(disclaimerBackground.getAttribute('width'));
       assertNear(disclaimerRight, activityRight, 'Disclaimer should align to the widest activity right edge when legend is hidden');
+      assert(Number(disclaimerBackground.getAttribute('height')) <= 52, 'Single-line disclaimer should stay compact');
 
       renderChart(container, root, {
         showPercentage: false,
