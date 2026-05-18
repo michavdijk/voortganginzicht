@@ -510,7 +510,6 @@ body {
   white-space: nowrap;
 }
 
-.app-footer__help-link,
 .app-footer__contact-link {
   justify-self: center;
   color: var(--color-text-muted);
@@ -519,15 +518,9 @@ body {
   text-underline-offset: 2px;
 }
 
-.app-footer__help-link:hover,
-.app-footer__help-link:focus-visible,
 .app-footer__contact-link:hover,
 .app-footer__contact-link:focus-visible {
   color: var(--color-text);
-}
-
-.app-footer__separator {
-  color: #94a3b8;
 }
 
 .app-footer__version {

@@ -622,9 +622,6 @@ function applyStaticTranslations() {
   const chartHeader = document.getElementById('chart-panel-header');
   if (chartHeader) chartHeader.textContent = t('panel.chart.header');
 
-  const footerHelpLink = document.getElementById('footer-help-link');
-  if (footerHelpLink) footerHelpLink.textContent = t('help.overview.nav');
-
   const footerContactLink = document.getElementById('footer-contact-link');
   if (footerContactLink) {
     footerContactLink.textContent = t('contact.feedback.link');
