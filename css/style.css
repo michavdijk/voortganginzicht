@@ -1159,9 +1159,42 @@ body.help-panel-open {
   line-height: 1.35;
 }
 
-.contact-dialog__kofi-widget {
-  min-height: 42px;
+.contact-dialog__kofi-button {
+  display: inline-flex;
   margin-top: 4px;
+  border-radius: var(--radius-md);
+  line-height: 0;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.contact-dialog__kofi-button:hover,
+.contact-dialog__kofi-button:focus-visible {
+  transform: translateY(-1px);
+}
+
+.contact-dialog__kofi-button:active {
+  transform: translateY(0);
+}
+
+.contact-dialog__kofi-button:focus-visible {
+  outline: 2px solid var(--color-btn-primary);
+  outline-offset: 3px;
+}
+
+.contact-dialog__kofi-button-image {
+  display: block;
+  width: 210px;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: filter 0.12s ease;
+}
+
+.contact-dialog__kofi-button:hover .contact-dialog__kofi-button-image,
+.contact-dialog__kofi-button:focus-visible .contact-dialog__kofi-button-image {
+  filter: brightness(1.04) drop-shadow(0 3px 5px rgb(15 23 42 / 0.18));
 }
 
 @media (max-width: 700px) {

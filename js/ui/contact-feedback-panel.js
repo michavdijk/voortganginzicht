@@ -1,19 +1,18 @@
 /**
  * Contact & feedback modal.
  *
- * Opens from the footer and shows contact details plus the official Ko-fi
- * support button inside the dialog.
+ * Opens from the footer and shows contact details plus a local Ko-fi support
+ * button image inside the dialog.
  */
 
 import { on } from '../events.js';
 import { t } from '../i18n.js';
 
 const CONTACT_EMAIL = 'info@voortganginzicht.nl';
-const KOFI_SCRIPT_URL = 'https://storage.ko-fi.com/cdn/widget/Widget_2.js';
 const KOFI_INLINE_LABEL = 'Ko-fi ☕.';
-const KOFI_BUTTON_TEXT = 'Support me on Ko-fi';
-const KOFI_BUTTON_COLOR = '#2463EB';
-const KOFI_WIDGET_ID = 'M4M51ZQBR8';
+const KOFI_SUPPORT_URL = 'https://ko-fi.com/michavdijk';
+const KOFI_BUTTON_IMAGE = 'assets/support_me_on_kofi_blue.png';
+const KOFI_BUTTON_ALT = 'Support me on Ko-fi';
 
 let overlay = null;
 let dialogTitle = null;
@@ -21,9 +20,6 @@ let closeButton = null;
 let contentEl = null;
 let previouslyFocused = null;
 let isInitialised = false;
-let kofiScriptPromise = null;
-let kofiButtonPromise = null;
-let kofiButtonHtml = '';
 
 /**
  * Initialise global contact & feedback interactions.
@@ -41,9 +37,6 @@ export function init() {
   });
 
   updateTriggerLabels();
-  prepareKofiButton().catch(() => {
-    // The modal can still open without blocking if Ko-fi is unavailable.
-  });
 }
 
 function handleDocumentClick(event) {
@@ -155,11 +148,7 @@ function renderDialog() {
 
   appendSupportParagraph();
 
-  const kofiMount = document.createElement('div');
-  kofiMount.className = 'contact-dialog__kofi-widget';
-  kofiMount.dataset.kofiWidgetMount = 'true';
-  contentEl.appendChild(kofiMount);
-  renderKofiButton(kofiMount);
+  contentEl.appendChild(buildKofiSupportLink());
 }
 
 function appendParagraph(key) {
@@ -221,93 +210,24 @@ function buildEmailIcon() {
   return svg;
 }
 
-function renderKofiButton(container) {
-  container.innerHTML = '';
-  if (kofiButtonHtml) {
-    insertKofiButton(container);
-    return;
-  }
+function buildKofiSupportLink() {
+  const link = document.createElement('a');
+  link.className = 'contact-dialog__kofi-button';
+  link.dataset.kofiSupportLink = 'true';
+  link.href = KOFI_SUPPORT_URL;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.setAttribute('aria-label', KOFI_BUTTON_ALT);
 
-  container.setAttribute('aria-busy', 'true');
+  const image = document.createElement('img');
+  image.className = 'contact-dialog__kofi-button-image';
+  image.src = KOFI_BUTTON_IMAGE;
+  image.width = 980;
+  image.height = 198;
+  image.alt = KOFI_BUTTON_ALT;
 
-  prepareKofiButton()
-    .then(() => {
-      if (!document.contains(container)) return;
-      insertKofiButton(container);
-    })
-    .catch(() => {
-      if (!document.contains(container)) return;
-      container.removeAttribute('aria-busy');
-      container.dataset.kofiWidgetError = 'true';
-    });
-}
-
-function prepareKofiButton() {
-  if (kofiButtonHtml) return Promise.resolve(kofiButtonHtml);
-  if (kofiButtonPromise) return kofiButtonPromise;
-
-  kofiButtonPromise = ensureKofiScript()
-    .then(() => {
-      if (!kofiButtonHtml) kofiButtonHtml = captureKofiButtonHtml();
-      return kofiButtonHtml;
-    })
-    .catch((error) => {
-      kofiButtonPromise = null;
-      throw error;
-    });
-
-  return kofiButtonPromise;
-}
-
-function ensureKofiScript() {
-  if (canDrawKofiButton()) return Promise.resolve();
-  if (kofiScriptPromise) return kofiScriptPromise;
-
-  kofiScriptPromise = new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.type = 'text/javascript';
-    script.src = KOFI_SCRIPT_URL;
-    script.async = true;
-    script.dataset.kofiWidgetScript = 'true';
-    script.addEventListener('load', resolve, { once: true });
-    script.addEventListener('error', reject, { once: true });
-    document.body.appendChild(script);
-  });
-
-  return kofiScriptPromise;
-}
-
-function canDrawKofiButton() {
-  return typeof window.kofiwidget2?.init === 'function'
-    && typeof window.kofiwidget2?.draw === 'function';
-}
-
-function captureKofiButtonHtml() {
-  if (!canDrawKofiButton()) return '';
-
-  let html = '';
-  const originalWrite = document.write;
-  const originalWriteln = document.writeln;
-  const captureWrite = (chunk = '') => {
-    html += String(chunk);
-  };
-
-  document.write = captureWrite;
-  document.writeln = captureWrite;
-
-  try {
-    window.kofiwidget2.init(KOFI_BUTTON_TEXT, KOFI_BUTTON_COLOR, KOFI_WIDGET_ID);
-    window.kofiwidget2.draw();
-    return html;
-  } finally {
-    document.write = originalWrite;
-    document.writeln = originalWriteln;
-  }
-}
-
-function insertKofiButton(container) {
-  container.innerHTML = kofiButtonHtml;
-  container.removeAttribute('aria-busy');
+  link.appendChild(image);
+  return link;
 }
 
 function updateTriggerLabels() {

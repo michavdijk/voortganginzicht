@@ -2002,18 +2002,7 @@
       resetSettings();
     });
 
-    test('contact feedback footer link opens a modal with contact details and official Ko-fi button', () => {
-      const originalKofiWidget = window.kofiwidget2;
-      const initCalls = [];
-      window.kofiwidget2 = {
-        init(text, color, id) {
-          initCalls.push({ text, color, id });
-        },
-        draw() {
-          document.writeln('<a data-official-kofi-button="true">Support me on Ko-fi</a>');
-        },
-      };
-
+    test('contact feedback footer link opens a modal with contact details and local Ko-fi button', () => {
       const trigger = document.createElement('a');
       trigger.href = '#contact-feedback';
       trigger.dataset.contactFeedback = 'true';
@@ -2022,7 +2011,6 @@
       try {
         initContactFeedbackPanel();
         assert(trigger.textContent === 'Contact & feedback');
-        assert(initCalls.length === 1, 'Ko-fi button should be prepared before the modal opens');
 
         trigger.click();
 
@@ -2040,23 +2028,19 @@
         assert(email?.textContent === 'info@voortganginzicht.nl');
         assert(email?.querySelector('[data-contact-email-icon="true"]') !== null);
 
-        const supportButton = dialog.querySelector('[data-official-kofi-button="true"]');
-        assert(initCalls.length === 1);
-        assert(initCalls[0].text === 'Support me on Ko-fi');
-        assert(initCalls[0].color === '#2463EB');
-        assert(initCalls[0].id === 'M4M51ZQBR8');
-        assert(supportButton?.textContent === 'Support me on Ko-fi');
-        assert(document.querySelector('script[data-kofi-widget-script="true"]') === null);
+        const supportButton = dialog.querySelector('[data-kofi-support-link="true"]');
+        const supportImage = supportButton?.querySelector('img');
+        assert(supportButton?.getAttribute('href') === 'https://ko-fi.com/michavdijk');
+        assert(supportButton?.getAttribute('target') === '_blank');
+        assert(supportButton?.getAttribute('rel') === 'noopener noreferrer');
+        assert(supportImage?.getAttribute('src') === 'assets/support_me_on_kofi_blue.png');
+        assert(supportImage?.getAttribute('alt') === 'Support me on Ko-fi');
+        assert(document.querySelector('script[src*="ko-fi"]') === null);
 
         dialog.querySelector('[data-contact-feedback-close="true"]').click();
         assert(overlay.hidden === true, 'Contact overlay should close');
       } finally {
         document.body.removeChild(trigger);
-        if (originalKofiWidget === undefined) {
-          delete window.kofiwidget2;
-        } else {
-          window.kofiwidget2 = originalKofiWidget;
-        }
       }
     });
 
