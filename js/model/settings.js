@@ -2,18 +2,19 @@
  * Application settings store.
  *
  * Holds chart generation options: colour scheme, percentage visibility,
- * optional completion checks, optional legend, optional actual spending markers,
- * optional project status and optional size indicators.
+ * optional completion checks, optional legend, optional disclaimer, optional
+ * actual spending markers, optional project status and optional size indicators.
  * Settings are in-memory only and reset to defaults on page reload.
  */
 
 /** @typedef {{ omvang: number, label: string }} SizeIndicator */
 /** @typedef {{ omvang: number | null, label: string }} EditableSizeIndicator */
 /** @typedef {{ fill: string, bg: string, border: string, text?: string }} ColorPalette */
-/** @typedef {{ showPercentage: boolean, showCompleteCheck: boolean, showLegend: boolean, colorScheme: string, customColor: string, showActualSpending: boolean, showProjectStatus: boolean, showSizeIndicators: boolean, sizeIndicators: EditableSizeIndicator[] }} Settings */
+/** @typedef {{ showPercentage: boolean, showCompleteCheck: boolean, showLegend: boolean, showDisclaimer: boolean, disclaimerText: string, colorScheme: string, customColor: string, showActualSpending: boolean, showProjectStatus: boolean, showSizeIndicators: boolean, sizeIndicators: EditableSizeIndicator[] }} Settings */
 
 export const CUSTOM_COLOR_SCHEME = 'aangepast';
 export const DEFAULT_CUSTOM_COLOR = '#2563EB';
+export const MAX_DISCLAIMER_TEXT_LENGTH = 1000;
 
 /**
  * Color palettes keyed by scheme name.
@@ -40,6 +41,8 @@ const DEFAULT_SETTINGS = {
   showPercentage: true,
   showCompleteCheck: false,
   showLegend: false,
+  showDisclaimer: false,
+  disclaimerText: '',
   colorScheme: DEFAULT_COLOR_SCHEME,
   customColor: DEFAULT_CUSTOM_COLOR,
   showActualSpending: false,
@@ -79,6 +82,12 @@ export function updateSettings(patch) {
   }
   if ('showLegend' in patch) {
     _settings.showLegend = Boolean(patch.showLegend);
+  }
+  if ('showDisclaimer' in patch) {
+    _settings.showDisclaimer = Boolean(patch.showDisclaimer);
+  }
+  if ('disclaimerText' in patch) {
+    _settings.disclaimerText = normalizeDisclaimerText(patch.disclaimerText);
   }
   if ('colorScheme' in patch) {
     _settings.colorScheme = normalizeColorScheme(patch.colorScheme);
@@ -122,6 +131,16 @@ export function normalizeSizeIndicators(raw) {
     if (indicator) indicators.push(indicator);
   }
   return indicators;
+}
+
+/**
+ * Return a sanitized disclaimer/toelichting string.
+ * @param {*} raw
+ * @returns {string}
+ */
+export function normalizeDisclaimerText(raw) {
+  if (typeof raw !== 'string') return '';
+  return raw.replace(/\r\n?/g, '\n').slice(0, MAX_DISCLAIMER_TEXT_LENGTH);
 }
 
 /**

@@ -27,7 +27,7 @@ import {
   calcEffectiveOmvang,
   calcProjectSpendingStatus,
 } from './progress-calc.js';
-import { getColorPalette, normalizeSizeIndicators } from '../model/settings.js';
+import { getColorPalette, normalizeDisclaimerText, normalizeSizeIndicators } from '../model/settings.js';
 import { t } from '../i18n.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -64,6 +64,16 @@ const PROJECT_STATUS_FONT_SIZE = 12;
 const PROJECT_STATUS_SUFFIX_FONT_SIZE = 10;
 const PROJECT_STATUS_SUFFIX_GAP = 2;
 const PROJECT_STATUS_CHAR_WIDTH = 6.3;
+const FOOTER_BLOCK_GAP = 8;
+const FOOTER_SIDE_PADDING = 16;
+const LEGEND_WIDTH = 180;
+const DISCLAIMER_MIN_WIDTH = 240;
+const DISCLAIMER_TEXT_LINE_HEIGHT = 16;
+const DISCLAIMER_TEXT_FONT_SIZE = 12;
+const DISCLAIMER_CHAR_WIDTH = 6.1;
+const EMPTY_DISCLAIMER_LINE = String.fromCharCode(160);
+let disclaimerTextMeasureContext = null;
+let disclaimerSvgMeasure = null;
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -74,7 +84,7 @@ const PROJECT_STATUS_CHAR_WIDTH = 6.3;
  *
  * @param {HTMLElement} container
  * @param {import('../model/tree.js').Knoop} root
- * @param {{ showPercentage: boolean, showCompleteCheck?: boolean, showLegend?: boolean, colorScheme: string, customColor?: string, showActualSpending?: boolean, showProjectStatus?: boolean, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }>, chartZoom?: number }} settings
+ * @param {{ showPercentage: boolean, showCompleteCheck?: boolean, showLegend?: boolean, showDisclaimer?: boolean, disclaimerText?: string, colorScheme: string, customColor?: string, showActualSpending?: boolean, showProjectStatus?: boolean, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }>, chartZoom?: number }} settings
  */
 export function renderChart(container, root, settings = { showPercentage: true, colorScheme: 'blauw' }) {
   // Measure available width via a cascade of fallbacks.
@@ -139,8 +149,12 @@ export function renderChart(container, root, settings = { showPercentage: true, 
     svg.appendChild(buildSizeGuide(sizeGuide));
   }
 
-  // Add legend if enabled.
-  const legendWidth = 180;
+  // Add footer blocks if enabled.
+  const disclaimerText = settings.showDisclaimer
+    ? normalizeDisclaimerText(settings.disclaimerText)
+    : '';
+  const showDisclaimer = disclaimerText.trim().length > 0;
+  const showLegend = settings.showLegend === true;
   const showCompleteLegendRow = showCompleteCheck && boxes.some(box => canRenderCompleteIndicator(box));
   const showActualSpendingLegendRow = Boolean(settings.showActualSpending) &&
     boxes.some(box => canRenderActualSpendingMarker(box, Boolean(settings.showPercentage)));
@@ -149,28 +163,53 @@ export function renderChart(container, root, settings = { showPercentage: true, 
   let extendedTotalWidth = totalWidth;
   let extendedTotalHeight = totalHeight;
 
-  if (settings.showLegend === true) {
+  if (showLegend || showDisclaimer) {
     const contentRight = boxes.length > 0 ? Math.max(...boxes.map(b => b.x + b.width)) : totalWidth - 16;
-    const legendX = Math.max(contentRight - legendWidth, 16);
-    const legendY = sizeIndicators.length > 0
-      ? chartBottom + 24
-      : sizeGuide
-        ? sizeGuide.y + SIZE_GUIDE_HEIGHT + 8
-        : totalHeight - legendHeight - 16;
+    const footerY = sizeGuide
+      ? sizeGuide.y + SIZE_GUIDE_HEIGHT + 8
+      : chartBottom + 24;
+    const footerX = FOOTER_SIDE_PADDING;
+    let footerRight = Math.max(contentRight, footerX + LEGEND_WIDTH);
+    let legendX = null;
+    let disclaimerX = null;
+    let disclaimerWidth = 0;
 
-    const legendBottom = legendY + legendHeight + 16;
-    if (legendBottom > extendedTotalHeight) {
-      extendedTotalHeight = legendBottom;
-    }
-    const legendRight = legendX + legendWidth + 16;
-    if (legendRight > extendedTotalWidth) {
-      extendedTotalWidth = legendRight;
+    if (showLegend && showDisclaimer) {
+      footerRight = Math.max(
+        footerRight,
+        footerX + DISCLAIMER_MIN_WIDTH + FOOTER_BLOCK_GAP + LEGEND_WIDTH
+      );
+      legendX = footerRight - LEGEND_WIDTH;
+      disclaimerX = footerX;
+      disclaimerWidth = Math.max(DISCLAIMER_MIN_WIDTH, legendX - FOOTER_BLOCK_GAP - disclaimerX);
+    } else if (showLegend) {
+      legendX = Math.max(footerRight - LEGEND_WIDTH, footerX);
+    } else {
+      footerRight = Math.max(footerRight, footerX + DISCLAIMER_MIN_WIDTH);
+      disclaimerX = footerX;
+      disclaimerWidth = Math.max(DISCLAIMER_MIN_WIDTH, footerRight - disclaimerX);
     }
 
-    svg.appendChild(buildLegend(legendX, legendY, legendWidth, legendHeight, palette, {
-      showComplete: showCompleteLegendRow,
-      showActualSpending: showActualSpendingLegendRow,
-    }));
+    const disclaimerHeight = showDisclaimer
+      ? calculateDisclaimerHeight(disclaimerText, disclaimerWidth)
+      : 0;
+    const footerHeight = Math.max(
+      showLegend ? legendHeight : 0,
+      disclaimerHeight
+    );
+
+    if (showDisclaimer) {
+      svg.appendChild(buildDisclaimer(disclaimerX, footerY, disclaimerWidth, footerHeight, disclaimerText));
+    }
+    if (showLegend) {
+      svg.appendChild(buildLegend(legendX, footerY, LEGEND_WIDTH, footerHeight, palette, {
+        showComplete: showCompleteLegendRow,
+        showActualSpending: showActualSpendingLegendRow,
+      }));
+    }
+
+    extendedTotalHeight = Math.max(extendedTotalHeight, footerY + footerHeight + FOOTER_SIDE_PADDING);
+    extendedTotalWidth = Math.max(extendedTotalWidth, footerRight + FOOTER_SIDE_PADDING);
   }
 
   if (projectStatus && projectStatusBox) {
@@ -827,6 +866,190 @@ function buildLegend(x, y, width, height, palette, { showComplete, showActualSpe
   }
 
   return g;
+}
+
+// ── Disclaimer builder ──────────────────────────────────────────────────────
+
+function calculateDisclaimerHeight(text, width) {
+  const lines = wrapDisclaimerText(text, width);
+  return 36 + (lines.length * DISCLAIMER_TEXT_LINE_HEIGHT) + 14;
+}
+
+function buildDisclaimer(x, y, width, height, text) {
+  const g = createEl('g');
+  g.setAttribute('data-chart-disclaimer', 'true');
+
+  const background = createEl('rect');
+  setAttrs(background, {
+    x,
+    y,
+    width,
+    height,
+    rx: 10,
+    ry: 10,
+    fill: COLOR_WHITE,
+    stroke: '#CBD5E1',
+    'stroke-width': 1,
+  });
+  g.appendChild(background);
+
+  const title = createEl('text');
+  title.setAttribute('data-chart-disclaimer-title', 'true');
+  setAttrs(title, {
+    x: x + 12,
+    y: y + 16,
+    fill: COLOR_TEXT_DARK,
+    'font-size': 11,
+    'font-family': FONT_FAMILY,
+    'font-weight': 700,
+  });
+  title.textContent = t('chart.disclaimer.title').toUpperCase();
+  g.appendChild(title);
+
+  const body = createEl('text');
+  body.setAttribute('data-chart-disclaimer-text', 'true');
+  setAttrs(body, {
+    x: x + 12,
+    y: y + 38,
+    fill: COLOR_TEXT_DARK,
+    'font-size': DISCLAIMER_TEXT_FONT_SIZE,
+    'font-family': FONT_FAMILY,
+    'font-weight': 400,
+  });
+
+  wrapDisclaimerText(text, width).forEach((line, index) => {
+    const tspan = createEl('tspan');
+    tspan.setAttribute('x', String(x + 12));
+    if (index > 0) tspan.setAttribute('dy', String(DISCLAIMER_TEXT_LINE_HEIGHT));
+    if (line === '') {
+      tspan.setAttribute('data-empty-disclaimer-line', 'true');
+      tspan.textContent = EMPTY_DISCLAIMER_LINE;
+    } else {
+      tspan.textContent = line;
+    }
+    body.appendChild(tspan);
+  });
+  g.appendChild(body);
+
+  return g;
+}
+
+function wrapDisclaimerText(text, width) {
+  const textWidth = Math.max(1, width - 24);
+  const lines = [];
+  for (const paragraph of String(text).split('\n')) {
+    const wrapped = paragraph
+      ? wrapDisclaimerParagraphToWidth(paragraph, textWidth)
+      : [''];
+    for (const line of wrapped) {
+      lines.push(line);
+    }
+  }
+  return lines.length > 0 ? lines : [''];
+}
+
+function wrapDisclaimerParagraphToWidth(text, maxLineWidth) {
+  const words = String(text).split(' ');
+  const lines = [];
+  let current = '';
+
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (measureDisclaimerTextWidth(candidate) <= maxLineWidth) {
+      current = candidate;
+    } else if (current) {
+      lines.push(current);
+      current = word;
+    } else {
+      lines.push(...splitLongDisclaimerWord(word, maxLineWidth));
+      current = '';
+    }
+  }
+
+  if (current) lines.push(current);
+  return lines.length > 0 ? lines : [''];
+}
+
+function splitLongDisclaimerWord(word, maxLineWidth) {
+  const chunks = [];
+  let current = '';
+
+  for (const char of String(word)) {
+    const candidate = current + char;
+    if (current && measureDisclaimerTextWidth(candidate) > maxLineWidth) {
+      chunks.push(current);
+      current = char;
+    } else {
+      current = candidate;
+    }
+  }
+
+  if (current) chunks.push(current);
+  return chunks.length > 0 ? chunks : [''];
+}
+
+function measureDisclaimerTextWidth(text) {
+  const svgText = getDisclaimerSvgMeasureText();
+  if (svgText) {
+    svgText.textContent = String(text);
+    return svgText.getComputedTextLength();
+  }
+
+  const context = getDisclaimerTextMeasureContext();
+  if (context) return context.measureText(text).width;
+  return String(text).length * DISCLAIMER_CHAR_WIDTH;
+}
+
+function getDisclaimerSvgMeasureText() {
+  if (disclaimerSvgMeasure && document.body?.contains(disclaimerSvgMeasure.svg)) {
+    return disclaimerSvgMeasure.text;
+  }
+  if (typeof document === 'undefined' || !document.body) return null;
+
+  const svg = createEl('svg');
+  setAttrs(svg, {
+    width: 1,
+    height: 1,
+    'aria-hidden': 'true',
+    focusable: 'false',
+  });
+  Object.assign(svg.style, {
+    position: 'absolute',
+    left: '-9999px',
+    top: '-9999px',
+    overflow: 'hidden',
+    visibility: 'hidden',
+  });
+
+  const text = createEl('text');
+  setAttrs(text, {
+    x: 0,
+    y: 0,
+    fill: COLOR_TEXT_DARK,
+    'font-size': DISCLAIMER_TEXT_FONT_SIZE,
+    'font-family': FONT_FAMILY,
+    'font-weight': 400,
+  });
+  svg.appendChild(text);
+  document.body.appendChild(svg);
+  disclaimerSvgMeasure = { svg, text };
+  return text;
+}
+
+function getDisclaimerTextMeasureContext() {
+  if (disclaimerTextMeasureContext) return disclaimerTextMeasureContext;
+
+  if (typeof document !== 'undefined') {
+    disclaimerTextMeasureContext = document.createElement('canvas').getContext('2d');
+  } else if (typeof OffscreenCanvas !== 'undefined') {
+    disclaimerTextMeasureContext = new OffscreenCanvas(1, 1).getContext('2d');
+  }
+
+  if (disclaimerTextMeasureContext) {
+    disclaimerTextMeasureContext.font = `${DISCLAIMER_TEXT_FONT_SIZE}px ${FONT_FAMILY}`;
+  }
+
+  return disclaimerTextMeasureContext;
 }
 
 // ── Connector builder ─────────────────────────────────────────────────────────

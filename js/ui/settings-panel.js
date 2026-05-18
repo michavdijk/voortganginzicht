@@ -5,6 +5,7 @@
  * – "Percentage opnemen in output" checkbox
  * – "Vinkje bij voltooid tonen" checkbox
  * – "Legenda tonen" checkbox
+ * – "Toelichting tonen" checkbox with optional text
  * – "Werkelijke besteding tonen" checkbox
  * – "Status project tonen" checkbox when actual spending is visible
  * – "Kleurenschema" dropdown
@@ -18,6 +19,7 @@ import {
   updateSettings,
   COLOR_SCHEME_KEYS,
   CUSTOM_COLOR_SCHEME,
+  MAX_DISCLAIMER_TEXT_LENGTH,
   getColorPalette,
   normalizeCustomColor,
 } from '../model/settings.js';
@@ -153,6 +155,9 @@ function render() {
   legendLabel.prepend(legendCheckbox);
   legendRow.appendChild(legendLabel);
   displaySection.appendChild(legendRow);
+
+  // ── Disclaimer toggle and text ─────────────────────────────────────────────
+  displaySection.appendChild(buildDisclaimerControl(settings));
 
   _container.appendChild(displaySection);
 
@@ -374,6 +379,88 @@ function buildCustomColorControl(settings) {
   return row;
 }
 
+function buildDisclaimerControl(settings) {
+  const row = buildRow();
+  row.classList.add('settings-panel__row--stacked');
+  row.dataset.settingDisclaimer = 'true';
+
+  const header = document.createElement('div');
+  header.className = 'settings-panel__row';
+
+  const label = document.createElement('label');
+  label.className = 'settings-panel__label';
+  label.textContent = t('settings.disclaimer');
+
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.className = 'settings-panel__checkbox';
+  checkbox.checked = settings.showDisclaimer;
+  checkbox.addEventListener('change', () => {
+    updateSettings({ showDisclaimer: checkbox.checked });
+    emit('settings-changed');
+    render();
+  });
+
+  label.prepend(checkbox);
+  header.appendChild(label);
+  row.appendChild(header);
+
+  if (!settings.showDisclaimer) return row;
+
+  const field = document.createElement('label');
+  field.className = 'settings-panel__field settings-panel__field--full';
+
+  const textLabel = document.createElement('span');
+  textLabel.className = 'settings-panel__field-label';
+  textLabel.textContent = t('settings.disclaimer.text');
+  field.appendChild(textLabel);
+
+  const textarea = document.createElement('textarea');
+  textarea.className = 'settings-panel__input settings-panel__textarea';
+  textarea.maxLength = MAX_DISCLAIMER_TEXT_LENGTH;
+  textarea.required = true;
+  textarea.rows = 4;
+  textarea.value = settings.disclaimerText ?? '';
+  textarea.dataset.settingDisclaimerText = 'true';
+
+  const counter = document.createElement('span');
+  counter.id = 'settings-disclaimer-counter';
+  counter.className = 'settings-panel__counter';
+  counter.dataset.settingDisclaimerCounter = 'true';
+
+  const error = document.createElement('span');
+  error.id = 'settings-disclaimer-error';
+  error.className = 'settings-panel__field-error';
+  error.setAttribute('aria-live', 'polite');
+  error.hidden = true;
+
+  textarea.setAttribute('aria-describedby', `${counter.id} ${error.id}`);
+
+  const updateCounter = () => {
+    counter.textContent = t('settings.disclaimer.counter', {
+      count: textarea.value.length,
+      max: MAX_DISCLAIMER_TEXT_LENGTH,
+    });
+  };
+
+  textarea.addEventListener('input', () => {
+    if (textarea.value.length > MAX_DISCLAIMER_TEXT_LENGTH) {
+      textarea.value = textarea.value.slice(0, MAX_DISCLAIMER_TEXT_LENGTH);
+    }
+    updateSettings({ disclaimerText: textarea.value });
+    updateCounter();
+    validateDisclaimerRequired(textarea);
+    emit('settings-changed');
+  });
+
+  field.append(textarea, counter, error);
+  row.appendChild(field);
+
+  updateCounter();
+  validateDisclaimerRequired(textarea);
+  return row;
+}
+
 function buildSizeIndicatorRow(indicator, index) {
   const currentIndicator = { ...indicator };
   const row = document.createElement('div');
@@ -506,6 +593,16 @@ function validateSizeIndicatorLabelRequired(labelInput, indicator) {
   }
 
   clearFieldError(labelInput);
+  return true;
+}
+
+function validateDisclaimerRequired(textarea) {
+  if (textarea.value.trim().length === 0) {
+    setFieldError(textarea, t('validation.disclaimer.required'));
+    return false;
+  }
+
+  clearFieldError(textarea);
   return true;
 }
 

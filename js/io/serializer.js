@@ -8,6 +8,8 @@
  *       "showPercentage": boolean,
  *       "showCompleteCheck": boolean,
  *       "showLegend": boolean,
+ *       "showDisclaimer": boolean,
+ *       "disclaimerText": string,
  *       "colorScheme": string,
  *       "customColor": string,
  *       "showActualSpending": boolean,
@@ -37,6 +39,7 @@ import {
   DEFAULT_CUSTOM_COLOR,
   normalizeColorScheme,
   normalizeCustomColor,
+  normalizeDisclaimerText,
   normalizeSizeIndicators,
 } from '../model/settings.js';
 
@@ -47,6 +50,8 @@ const DEFAULT_SETTINGS = {
   showPercentage: true,
   showCompleteCheck: false,
   showLegend: false,
+  showDisclaimer: false,
+  disclaimerText: '',
   colorScheme: 'blauw',
   customColor: DEFAULT_CUSTOM_COLOR,
   showActualSpending: false,
@@ -61,7 +66,7 @@ const DEFAULT_SETTINGS = {
  * Convert the in-memory tree, settings and project name to a JSON string.
  *
  * @param {import('../model/tree.js').Knoop | null} root
- * @param {{ showPercentage: boolean, showCompleteCheck?: boolean, showLegend?: boolean, colorScheme: string, customColor?: string, showActualSpending?: boolean, showProjectStatus?: boolean, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }> }} settings
+ * @param {{ showPercentage: boolean, showCompleteCheck?: boolean, showLegend?: boolean, showDisclaimer?: boolean, disclaimerText?: string, colorScheme: string, customColor?: string, showActualSpending?: boolean, showProjectStatus?: boolean, showSizeIndicators?: boolean, sizeIndicators?: Array<{ omvang: number | null, label: string }> }} settings
  * @param {string} [projectnaam]
  * @returns {string} JSON string
  */
@@ -73,6 +78,8 @@ export function serialize(root, settings, projectnaam = '') {
       showPercentage: settings.showPercentage,
       showCompleteCheck: Boolean(settings.showCompleteCheck),
       showLegend: settings.showLegend ?? DEFAULT_SETTINGS.showLegend,
+      showDisclaimer: Boolean(settings.showDisclaimer),
+      disclaimerText: normalizeDisclaimerText(settings.disclaimerText),
       colorScheme: normalizeColorScheme(settings.colorScheme),
       customColor: normalizeCustomColor(settings.customColor),
       showActualSpending: Boolean(settings.showActualSpending),
@@ -159,7 +166,7 @@ export function deserialize(jsonString) {
  * Parse and sanitise the instellingen block from a v2 document.
  * Falls back to defaults for missing or invalid values.
  * @param {*} raw
- * @returns {{ showPercentage: boolean, showCompleteCheck: boolean, showLegend: boolean, colorScheme: string, customColor: string, showActualSpending: boolean, showProjectStatus: boolean, showSizeIndicators: boolean, sizeIndicators: Array<{ omvang: number, label: string }> }}
+ * @returns {{ showPercentage: boolean, showCompleteCheck: boolean, showLegend: boolean, showDisclaimer: boolean, disclaimerText: string, colorScheme: string, customColor: string, showActualSpending: boolean, showProjectStatus: boolean, showSizeIndicators: boolean, sizeIndicators: Array<{ omvang: number, label: string }> }}
  */
 function parseInstellingen(raw) {
   if (typeof raw !== 'object' || raw === null) return { ...DEFAULT_SETTINGS };
@@ -175,6 +182,12 @@ function parseInstellingen(raw) {
   const showLegend = typeof raw.showLegend === 'boolean'
     ? raw.showLegend
     : DEFAULT_SETTINGS.showLegend;
+
+  const showDisclaimer = typeof raw.showDisclaimer === 'boolean'
+    ? raw.showDisclaimer
+    : DEFAULT_SETTINGS.showDisclaimer;
+
+  const disclaimerText = normalizeDisclaimerText(raw.disclaimerText);
 
   const colorScheme = COLOR_SCHEME_KEYS.includes(raw.colorScheme)
     ? raw.colorScheme
@@ -196,7 +209,19 @@ function parseInstellingen(raw) {
 
   const sizeIndicators = normalizeSizeIndicators(raw.sizeIndicators);
 
-  return { showPercentage, showCompleteCheck, showLegend, colorScheme, customColor, showActualSpending, showProjectStatus, showSizeIndicators, sizeIndicators };
+  return {
+    showPercentage,
+    showCompleteCheck,
+    showLegend,
+    showDisclaimer,
+    disclaimerText,
+    colorScheme,
+    customColor,
+    showActualSpending,
+    showProjectStatus,
+    showSizeIndicators,
+    sizeIndicators,
+  };
 }
 
 /**

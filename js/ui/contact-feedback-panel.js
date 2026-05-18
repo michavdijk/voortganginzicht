@@ -10,6 +10,7 @@ import { t } from '../i18n.js';
 
 const CONTACT_EMAIL = 'info@voortganginzicht.nl';
 const KOFI_SCRIPT_URL = 'https://storage.ko-fi.com/cdn/widget/Widget_2.js';
+const KOFI_INLINE_LABEL = 'Ko-fi ☕.';
 const KOFI_BUTTON_TEXT = 'Support me on Ko-fi';
 const KOFI_BUTTON_COLOR = '#2463EB';
 const KOFI_WIDGET_ID = 'M4M51ZQBR8';
@@ -152,7 +153,7 @@ function renderDialog() {
   supportTitle.textContent = t('contact.feedback.support.title');
   contentEl.appendChild(supportTitle);
 
-  appendParagraph('contact.feedback.support.body');
+  appendSupportParagraph();
 
   const kofiMount = document.createElement('div');
   kofiMount.className = 'contact-dialog__kofi-widget';
@@ -165,6 +166,30 @@ function appendParagraph(key) {
   const paragraph = document.createElement('p');
   paragraph.className = 'contact-dialog__paragraph';
   paragraph.textContent = t(key);
+  contentEl.appendChild(paragraph);
+}
+
+function appendSupportParagraph() {
+  const paragraph = document.createElement('p');
+  paragraph.className = 'contact-dialog__paragraph';
+
+  const text = t('contact.feedback.support.body');
+  const labelIndex = text.lastIndexOf(KOFI_INLINE_LABEL);
+  if (labelIndex === -1) {
+    paragraph.textContent = text;
+    contentEl.appendChild(paragraph);
+    return;
+  }
+
+  const label = document.createElement('span');
+  label.className = 'contact-dialog__kofi-label';
+  label.textContent = KOFI_INLINE_LABEL;
+
+  paragraph.append(
+    document.createTextNode(text.slice(0, labelIndex)),
+    label,
+    document.createTextNode(text.slice(labelIndex + KOFI_INLINE_LABEL.length)),
+  );
   contentEl.appendChild(paragraph);
 }
 

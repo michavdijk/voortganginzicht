@@ -53,7 +53,7 @@
     import { Knoop, getType, addChild, removeNode, renameNode, moveUp, moveDown, moveLevelUp, moveLevelDown, setOmvang, setActueleBesteding, setVoortgang } from '../js/model/tree.js';
     import { validateNaam, validateOmvang, validateActueleBesteding, validatePercentage } from '../js/model/validation.js';
     import { getRoot, setRoot, isDirty, markClean, newProject } from '../js/model/project.js';
-    import { CUSTOM_COLOR_SCHEME, getColorPalette, getSettings, updateSettings, resetSettings, normalizeSizeIndicators } from '../js/model/settings.js';
+    import { CUSTOM_COLOR_SCHEME, MAX_DISCLAIMER_TEXT_LENGTH, getColorPalette, getSettings, updateSettings, resetSettings, normalizeSizeIndicators } from '../js/model/settings.js';
     import { computeLayout, FIXED_WIDTH, TEXT_H_PADDING, wrapTextToWidth } from '../js/chart/layout.js';
     import { calcEffectiveActualSpending, calcProjectSpendingStatus } from '../js/chart/progress-calc.js';
     import { canRenderChart, getChartRenderIssue } from '../js/chart/render-validation.js';
@@ -1161,6 +1161,7 @@
         showActualSpending: true,
       });
       assert(container.querySelector('[data-chart-legend="true"]') === null, 'Legend should be hidden when disabled');
+      assert(container.querySelector('[data-chart-disclaimer="true"]') === null, 'Disclaimer should be hidden when disabled');
 
       renderChart(container, root, {
         showPercentage: false,
@@ -1191,6 +1192,98 @@
       const legendBackground = legend.querySelector('rect');
       const legendRight = Number(legendBackground.getAttribute('x')) + Number(legendBackground.getAttribute('width'));
       assert(legendRight <= viewBoxWidth, 'Legend should fit inside the SVG viewBox');
+
+      document.body.removeChild(container);
+    });
+
+    test('chart renderer shows disclaimer only with text and aligns it with the legend', () => {
+      const root = makeRoot('Project');
+      const act = addChild(root, 'Activiteit');
+      setOmvang(act, 8);
+
+      const container = document.createElement('div');
+      container.style.width = '700px';
+      document.body.appendChild(container);
+
+      renderChart(container, root, {
+        showPercentage: false,
+        showLegend: false,
+        showDisclaimer: true,
+        disclaimerText: '   ',
+        colorScheme: 'blauw',
+      });
+      assert(container.querySelector('[data-chart-disclaimer="true"]') === null, 'Empty disclaimer text should not render');
+
+      renderChart(container, root, {
+        showPercentage: false,
+        showLegend: false,
+        showDisclaimer: true,
+        disclaimerText: 'Deze rapportage is een momentopname.',
+        colorScheme: 'blauw',
+      });
+      let disclaimer = container.querySelector('[data-chart-disclaimer="true"]');
+      assert(disclaimer !== null, 'Disclaimer should render when enabled with text');
+      assert(disclaimer.querySelector('[data-chart-disclaimer-title="true"]')?.textContent === 'TOELICHTING');
+      assert(disclaimer.textContent.includes('Deze rapportage is een momentopname.'));
+
+      renderChart(container, root, {
+        showPercentage: false,
+        showLegend: false,
+        showDisclaimer: true,
+        disclaimerText: 'Eerste regel\n\nDerde regel',
+        colorScheme: 'blauw',
+      });
+      const disclaimerText = container.querySelector('[data-chart-disclaimer-text="true"]');
+      const disclaimerLines = disclaimerText.querySelectorAll('tspan');
+      assert(disclaimerLines.length === 3, 'Blank disclaimer lines should be preserved');
+      assert(disclaimerText.querySelector('[data-empty-disclaimer-line="true"]')?.textContent.charCodeAt(0) === 160);
+
+      const narrowButLongText = Array.from({ length: 220 }, () => 'i').join(' ');
+      container.style.width = '3200px';
+      renderChart(container, root, {
+        showPercentage: false,
+        showLegend: false,
+        showDisclaimer: true,
+        disclaimerText: narrowButLongText,
+        colorScheme: 'blauw',
+      });
+      const longDisclaimerLines = container.querySelectorAll('[data-chart-disclaimer-text="true"] tspan');
+      assert(longDisclaimerLines.length === 1, 'Disclaimer lines with spaces should use the full measured width');
+      assert(longDisclaimerLines[0].textContent === narrowButLongText);
+
+      container.style.width = '1050px';
+      renderChart(container, root, {
+        showPercentage: false,
+        showLegend: false,
+        showDisclaimer: true,
+        disclaimerText: 'Deze voortgangsrapportage geeft een beeld van de status van het project op basis van de opgegeven omvang, werkelijke besteding en voortgang van activiteiten. Deze gegevens zijn gebaseerd op inschattingen en kunnen in de praktijk afwijken.',
+        colorScheme: 'blauw',
+      });
+      const measuredFontLines = container.querySelectorAll('[data-chart-disclaimer-text="true"] tspan');
+      assert(measuredFontLines[0].textContent.includes('activiteiten.'), 'Disclaimer wrapping should use the rendered disclaimer font size');
+
+      container.style.width = '700px';
+      renderChart(container, root, {
+        showPercentage: false,
+        showLegend: true,
+        showDisclaimer: true,
+        disclaimerText: 'Deze rapportage is een momentopname met een langere toelichting die over meerdere regels mag lopen.',
+        colorScheme: 'blauw',
+      });
+      disclaimer = container.querySelector('[data-chart-disclaimer="true"]');
+      const legend = container.querySelector('[data-chart-legend="true"]');
+      assert(disclaimer !== null && legend !== null, 'Disclaimer and legend should both render');
+
+      const disclaimerBackground = disclaimer.querySelector('rect');
+      const legendBackground = legend.querySelector('rect');
+      assert(disclaimerBackground.getAttribute('y') === legendBackground.getAttribute('y'));
+      assert(disclaimerBackground.getAttribute('height') === legendBackground.getAttribute('height'));
+      assert(Number(legendBackground.getAttribute('width')) === 180, 'Legend should keep its fixed width');
+      assert(Number(disclaimerBackground.getAttribute('width')) > Number(legendBackground.getAttribute('width')));
+
+      const disclaimerRight = Number(disclaimerBackground.getAttribute('x')) + Number(disclaimerBackground.getAttribute('width'));
+      const legendX = Number(legendBackground.getAttribute('x'));
+      assert(disclaimerRight < legendX, 'Disclaimer should leave space before the legend');
 
       document.body.removeChild(container);
     });
@@ -1680,6 +1773,24 @@
       assert(result.settings.customColor === '#0F766E');
     });
 
+    test('serializer preserves disclaimer settings', () => {
+      const json = serialize(null, {
+        showPercentage: true,
+        showDisclaimer: true,
+        disclaimerText: 'Gebruik deze rapportage als toelichting bij de planning.',
+        colorScheme: 'blauw',
+      }, 'Toelichtingproject');
+
+      const doc = JSON.parse(json);
+      assert(doc.instellingen.showDisclaimer === true);
+      assert(doc.instellingen.disclaimerText === 'Gebruik deze rapportage als toelichting bij de planning.');
+
+      const result = deserialize(json);
+      assert(result.valid === true);
+      assert(result.settings.showDisclaimer === true);
+      assert(result.settings.disclaimerText === 'Gebruik deze rapportage als toelichting bij de planning.');
+    });
+
     test('legacy v2 settings without size indicators get defaults', () => {
       const result = deserialize(JSON.stringify({
         versie: '2',
@@ -1694,6 +1805,8 @@
       assert(result.settings.showActualSpending === false);
       assert(result.settings.showProjectStatus === false);
       assert(result.settings.showSizeIndicators === false);
+      assert(result.settings.showDisclaimer === false);
+      assert(result.settings.disclaimerText === '');
       assert(typeof result.settings.customColor === 'string');
       assert(Array.isArray(result.settings.sizeIndicators));
       assert(result.settings.sizeIndicators.length === 0);
@@ -1735,6 +1848,8 @@
         showPercentage: false,
         showCompleteCheck: true,
         showLegend: true,
+        showDisclaimer: true,
+        disclaimerText: 'Deze tekst hoort niet na reset te blijven staan.',
         colorScheme: CUSTOM_COLOR_SCHEME,
         customColor: '#FFFF00',
         showActualSpending: true,
@@ -1749,6 +1864,8 @@
       assert(settings.showPercentage === true);
       assert(settings.showCompleteCheck === false);
       assert(settings.showLegend === false);
+      assert(settings.showDisclaimer === false);
+      assert(settings.disclaimerText === '');
       assert(settings.colorScheme === 'blauw');
       assert(settings.customColor === '#2563EB');
       assert(settings.showActualSpending === false);
@@ -1846,6 +1963,7 @@
         assert(dialog.getAttribute('role') === 'dialog');
         assert(dialog.querySelector('.contact-dialog__title')?.textContent === 'Contact & feedback');
         assert(dialog.textContent.includes('Ondersteun de doorontwikkeling'));
+        assert(dialog.querySelector('.contact-dialog__kofi-label')?.textContent === 'Ko-fi ☕.');
 
         const email = dialog.querySelector('.contact-dialog__email');
         assert(email?.getAttribute('href') === 'mailto:info@voortganginzicht.nl');
@@ -1888,6 +2006,49 @@
 
       updateSettings({ showLegend: false });
       assert(getSettings().showLegend === false);
+    });
+
+    test('settings store disclaimer toggle and text with max length', () => {
+      resetSettings();
+      const longText = 'x'.repeat(MAX_DISCLAIMER_TEXT_LENGTH + 20);
+
+      updateSettings({ showDisclaimer: true, disclaimerText: longText });
+      const settings = getSettings();
+      assert(settings.showDisclaimer === true);
+      assert(settings.disclaimerText.length === MAX_DISCLAIMER_TEXT_LENGTH);
+
+      updateSettings({ showDisclaimer: false });
+      assert(getSettings().showDisclaimer === false);
+    });
+
+    test('settings panel validates required disclaimer text and shows counter', () => {
+      resetSettings();
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+
+      initSettingsPanel(container);
+      const row = container.querySelector('[data-setting-disclaimer="true"]');
+      assert(row !== null, 'Disclaimer setting should be visible');
+      assert(row.textContent.includes('Toelichting tonen'));
+      assert(container.querySelector('[data-setting-disclaimer-text="true"]') === null);
+
+      updateSettings({ showDisclaimer: true });
+      initSettingsPanel(container);
+      const textarea = container.querySelector('[data-setting-disclaimer-text="true"]');
+      const counter = container.querySelector('[data-setting-disclaimer-counter="true"]');
+      assert(textarea !== null, 'Disclaimer textarea should be visible when enabled');
+      assert(textarea.maxLength === MAX_DISCLAIMER_TEXT_LENGTH);
+      assert(textarea.getAttribute('aria-invalid') === 'true');
+      assert(counter?.textContent === `0 / ${MAX_DISCLAIMER_TEXT_LENGTH}`);
+
+      textarea.value = 'Korte toelichting';
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      assert(getSettings().disclaimerText === 'Korte toelichting');
+      assert(textarea.hasAttribute('aria-invalid') === false);
+      assert(counter.textContent === `17 / ${MAX_DISCLAIMER_TEXT_LENGTH}`);
+
+      document.body.removeChild(container);
+      resetSettings();
     });
 
     test('custom color palette derives background and readable text colors', () => {
