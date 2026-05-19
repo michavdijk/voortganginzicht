@@ -73,6 +73,12 @@ body {
   min-height: 100vh;
 }
 
+button,
+a,
+[role="button"] {
+  touch-action: manipulation;
+}
+
 /* ============================================================
    Error Banner
    ============================================================ */
@@ -631,6 +637,8 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .chart-zoom-level {
