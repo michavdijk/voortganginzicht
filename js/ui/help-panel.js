@@ -84,6 +84,7 @@ let closeButton = null;
 let navEl = null;
 let contentEl = null;
 let inlineHelpContainer = null;
+let inlineHelpNavResizeObserver = null;
 let activeSection = DEFAULT_SECTION;
 let previouslyFocused = null;
 let isInitialised = false;
@@ -289,12 +290,27 @@ function renderHelpNav(targetNav, renderAfterSelect) {
 
 function initInlineHelpNavScroll(nav) {
   const activeButton = nav.querySelector('.help-dialog__nav-button--active');
-  nav.addEventListener('scroll', () => updateInlineHelpNavOverflow(nav), { passive: true });
+  const updateOverflow = () => updateInlineHelpNavOverflow(nav);
+
+  inlineHelpNavResizeObserver?.disconnect();
+  inlineHelpNavResizeObserver = null;
+
+  nav.addEventListener('scroll', updateOverflow, { passive: true });
+
+  if (typeof ResizeObserver === 'function') {
+    const wrap = nav.closest('.mobile-help__nav-wrap');
+    inlineHelpNavResizeObserver = new ResizeObserver(updateOverflow);
+    inlineHelpNavResizeObserver.observe(nav);
+    if (wrap) inlineHelpNavResizeObserver.observe(wrap);
+  }
 
   requestAnimationFrame(() => {
     activeButton?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    updateInlineHelpNavOverflow(nav);
+    updateOverflow();
+    requestAnimationFrame(updateOverflow);
   });
+
+  window.setTimeout(updateOverflow, 120);
 }
 
 function updateInlineHelpNavOverflow(nav) {

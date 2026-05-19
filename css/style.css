@@ -1231,12 +1231,12 @@ body.help-panel-open {
 
 .mobile-help__nav-wrap::before {
   left: 0;
-  background: linear-gradient(to right, var(--color-bg) 30%, rgb(248 250 252 / 0));
+  background: linear-gradient(to right, var(--color-bg) 30%, rgba(248, 250, 252, 0));
 }
 
 .mobile-help__nav-wrap::after {
   right: 0;
-  background: linear-gradient(to left, var(--color-bg) 30%, rgb(248 250 252 / 0));
+  background: linear-gradient(to left, var(--color-bg) 30%, rgba(248, 250, 252, 0));
 }
 
 .mobile-help__nav-wrap--can-scroll-left::before,
