@@ -83,6 +83,7 @@ let dialogTitle = null;
 let closeButton = null;
 let navEl = null;
 let contentEl = null;
+let inlineHelpContainer = null;
 let activeSection = DEFAULT_SECTION;
 let previouslyFocused = null;
 let isInitialised = false;
@@ -99,6 +100,7 @@ export function init() {
 
   on('language-changed', () => {
     updateHelpTriggerLabels();
+    renderInlineHelp();
     if (overlay && !overlay.hidden) renderHelp();
   });
 
@@ -119,6 +121,24 @@ export function buildHelpButton(section = DEFAULT_SECTION, className = 'help-tri
   button.appendChild(buildHelpIcon());
   updateHelpTriggerLabel(button);
   return button;
+}
+
+/**
+ * Render the help content inline, used by the mobile Help tab.
+ * @param {HTMLElement} container
+ */
+export function initInline(container) {
+  inlineHelpContainer = container;
+  showInlineHelp(DEFAULT_SECTION);
+}
+
+/**
+ * Show a section in the inline help panel.
+ * @param {string} section
+ */
+export function showInlineHelp(section = DEFAULT_SECTION) {
+  activeSection = normalizeSection(section);
+  renderInlineHelp();
 }
 
 function handleDocumentClick(event) {
@@ -218,7 +238,36 @@ function renderHelp() {
   closeButton.setAttribute('aria-label', t('help.close'));
   navEl.setAttribute('aria-label', t('help.navLabel'));
 
-  navEl.innerHTML = '';
+  renderHelpNav(navEl, renderHelp);
+  renderSectionInto(contentEl, activeSection);
+}
+
+function renderInlineHelp() {
+  if (!inlineHelpContainer) return;
+
+  inlineHelpContainer.innerHTML = '';
+
+  const body = document.createElement('div');
+  body.className = 'help-dialog__body mobile-help__body';
+  inlineHelpContainer.appendChild(body);
+
+  const inlineNav = document.createElement('nav');
+  inlineNav.className = 'help-dialog__nav';
+  inlineNav.setAttribute('aria-label', t('help.navLabel'));
+  body.appendChild(inlineNav);
+
+  const inlineContent = document.createElement('article');
+  inlineContent.className = 'help-dialog__content';
+  body.appendChild(inlineContent);
+
+  renderHelpNav(inlineNav, renderInlineHelp);
+  renderSectionInto(inlineContent, activeSection);
+}
+
+function renderHelpNav(targetNav, renderAfterSelect) {
+  targetNav.innerHTML = '';
+  targetNav.setAttribute('aria-label', t('help.navLabel'));
+
   for (const section of HELP_SECTIONS) {
     const button = document.createElement('button');
     button.type = 'button';
@@ -227,26 +276,24 @@ function renderHelp() {
     button.textContent = t(`help.${section}.nav`);
     button.addEventListener('click', () => {
       activeSection = section;
-      renderHelp();
+      renderAfterSelect();
     });
-    navEl.appendChild(button);
+    targetNav.appendChild(button);
   }
-
-  renderSection();
 }
 
-function renderSection() {
-  contentEl.innerHTML = '';
+function renderSectionInto(targetContent, section) {
+  targetContent.innerHTML = '';
 
   const heading = document.createElement('h3');
   heading.className = 'help-dialog__section-title';
-  heading.textContent = t(`help.${activeSection}.title`);
-  contentEl.appendChild(heading);
+  heading.textContent = t(`help.${section}.title`);
+  targetContent.appendChild(heading);
 
-  const blocks = HELP_CONTENT[activeSection] || [];
+  const blocks = HELP_CONTENT[section] || [];
   for (const block of blocks) {
-    const element = buildHelpBlock(activeSection, block);
-    if (element) contentEl.appendChild(element);
+    const element = buildHelpBlock(section, block);
+    if (element) targetContent.appendChild(element);
   }
 }
 

@@ -224,9 +224,14 @@ body {
 .project-name-wrap {
   flex: 1;
   display: flex;
+  align-items: center;
   justify-content: center;
   padding: 0 16px;
   min-width: 0;
+}
+
+.mobile-header-mark {
+  display: none;
 }
 
 .project-name-title {
@@ -346,6 +351,10 @@ body {
 .toolbar-export__menu-item:focus-visible {
   background: var(--color-btn-bg);
   outline: none;
+}
+
+.mobile-header-menu {
+  display: none;
 }
 
 @media (max-width: 900px) {
@@ -571,6 +580,11 @@ body {
   background: var(--color-bg);
 }
 
+.panel--mobile-help {
+  display: none;
+  background: var(--color-surface);
+}
+
 .panel__header {
   padding: 12px 16px 8px;
   font-size: var(--font-size-sm);
@@ -692,7 +706,7 @@ body {
 }
 
 /* Stacked layout on narrow viewports */
-@media (max-width: 700px) {
+@media (max-width: 700px), ((pointer: coarse) and (max-height: 700px)) {
   .app-layout {
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr;
@@ -1164,7 +1178,7 @@ body.help-panel-open {
   filter: brightness(1.04) drop-shadow(0 3px 5px rgb(15 23 42 / 0.18));
 }
 
-@media (max-width: 700px) {
+@media (max-width: 700px), ((pointer: coarse) and (max-height: 700px)) {
   .help-dialog {
     width: 100%;
   }
@@ -1828,7 +1842,7 @@ ul.tree__children {
   text-align: center;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 700px), ((pointer: coarse) and (max-height: 700px)) {
   .settings-drawer {
     position: absolute;
     inset: auto 0 0 0;
@@ -1846,28 +1860,122 @@ ul.tree__children {
    Mobile panel navigation
    ============================================================ */
 
-@media (max-width: 700px) {
+@media (max-width: 700px), ((pointer: coarse) and (max-height: 700px)) {
   body {
     min-height: 100dvh;
   }
 
   .app-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
     order: 1;
-    gap: 4px 8px;
-    padding: 5px 8px;
+    gap: 8px;
+    min-height: 46px;
+    padding: 6px 8px;
+    flex-wrap: nowrap;
+    justify-content: stretch;
   }
 
-  .app-header__logo {
-    max-height: 34px;
+  .app-header__brand,
+  .toolbar,
+  .lang-switcher {
+    display: none;
   }
 
-  .toolbar {
-    gap: 6px;
+  .project-name-wrap {
+    grid-column: 1;
+    gap: 8px;
+    justify-content: flex-start;
+    padding: 0;
+    min-width: 0;
   }
 
-  .btn--toolbar {
-    min-height: 34px;
-    padding: 7px 10px;
+  .mobile-header-mark {
+    display: block;
+    width: 42px;
+    height: 28px;
+    object-fit: cover;
+    object-position: left center;
+    flex: 0 0 auto;
+  }
+
+  .project-name-title {
+    min-width: 0;
+    max-width: none;
+    justify-content: flex-start;
+    padding: 7px 8px;
+    text-align: left;
+    font-size: 0.9375rem;
+  }
+
+  .mobile-header-menu {
+    position: relative;
+    grid-column: 2;
+    display: block;
+    justify-self: end;
+  }
+
+  .mobile-header-menu__button {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+  }
+
+  .mobile-header-menu__button--active,
+  .mobile-header-menu__button:hover:not(:disabled) {
+    color: var(--color-text);
+    background: var(--color-btn-bg);
+  }
+
+  .mobile-header-menu__button svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+  }
+
+  .mobile-header-menu__list {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 80;
+    min-width: min(260px, calc(100vw - 16px));
+    padding: 6px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: 0 12px 28px rgb(15 23 42 / 0.18), 0 2px 8px rgb(15 23 42 / 0.08);
+  }
+
+  .mobile-header-menu__item {
+    display: flex;
+    width: 100%;
+    min-height: 38px;
+    align-items: center;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text);
+    font: inherit;
+    font-size: var(--font-size-sm);
+    font-weight: 550;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .mobile-header-menu__item:hover,
+  .mobile-header-menu__item:focus-visible {
+    background: var(--color-btn-bg);
+    outline: none;
+  }
+
+  .mobile-header-menu__separator {
+    height: 1px;
+    margin: 5px 4px;
+    background: var(--color-border);
   }
 
   .app-layout {
@@ -1887,21 +1995,13 @@ ul.tree__children {
 
   .app-footer {
     order: 3;
-    display: flex;
-    justify-content: center;
-    padding: 4px 10px;
-    font-size: 0.6875rem;
-  }
-
-  .app-footer__copyright,
-  .app-footer__version {
     display: none;
   }
 
   .mobile-panel-nav {
     order: 4;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 4px;
     padding: 6px max(8px, env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-right));
     background: var(--color-surface);
@@ -1943,7 +2043,7 @@ ul.tree__children {
   }
 
   .mobile-panel-nav__button--active,
-  .mobile-panel-nav__button[aria-selected="true"] {
+  .mobile-panel-nav__button[aria-current="page"] {
     color: #1d4ed8;
     background: #eff6ff;
     border-color: #bfdbfe;
@@ -1967,8 +2067,15 @@ ul.tree__children {
     display: none !important;
   }
 
+  .help-trigger,
+  .settings-drawer-toggle,
+  .settings-drawer__close {
+    display: none !important;
+  }
+
   .panel--tree,
-  .panel--chart {
+  .panel--chart,
+  .panel--mobile-help {
     grid-column: 1;
     grid-row: 1;
     min-width: 0;
@@ -1980,18 +2087,44 @@ ul.tree__children {
 
   body.app-mobile-panels.mobile-panel--tree .panel--tree,
   body.app-mobile-panels.mobile-panel--chart .panel--chart,
-  body.app-mobile-panels.mobile-panel--settings .panel--chart {
+  body.app-mobile-panels.mobile-panel--settings .panel--chart,
+  body.app-mobile-panels.mobile-panel--help .panel--mobile-help {
     display: flex;
   }
 
   body.app-mobile-panels.mobile-panel--tree .panel--chart,
   body.app-mobile-panels.mobile-panel--chart .panel--tree,
-  body.app-mobile-panels.mobile-panel--settings .panel--tree {
+  body.app-mobile-panels.mobile-panel--settings .panel--tree,
+  body.app-mobile-panels.mobile-panel--help .panel--tree,
+  body.app-mobile-panels.mobile-panel--help .panel--chart {
+    display: none;
+  }
+
+  body.app-mobile-panels:not(.mobile-panel--help) .panel--mobile-help {
     display: none;
   }
 
   body.app-mobile-panels.mobile-panel--settings .panel--chart > .panel__header {
     display: none;
+  }
+
+  body.app-mobile-panels.mobile-panel--tree .panel--tree > .panel__header,
+  body.app-mobile-panels.mobile-panel--settings .settings-drawer__header {
+    display: none;
+  }
+
+  body.app-mobile-panels.mobile-panel--chart .panel__header-title-group {
+    display: none;
+  }
+
+  body.app-mobile-panels.mobile-panel--chart .panel__header--chart {
+    justify-content: center;
+  }
+
+  body.app-mobile-panels.mobile-panel--chart .chart-header-actions {
+    width: 100%;
+    justify-content: center;
+    margin-left: 0;
   }
 
   body.app-mobile-panels.mobile-panel--settings .panel__content--chart {
@@ -2032,7 +2165,17 @@ ul.tree__children {
   }
 
   #chart-svg-container svg {
-    max-width: none;
+    max-width: 100%;
+  }
+
+  body.app-mobile-panels.mobile-panel--help .panel--mobile-help .panel__body {
+    padding: 0;
+  }
+
+  #mobile-help-panel-content,
+  #mobile-help-panel-content .help-dialog__body {
+    height: 100%;
+    min-height: 0;
   }
 
   .settings-drawer__body {

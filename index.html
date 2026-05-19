@@ -29,6 +29,13 @@
       />
     </div>
     <div class="project-name-wrap">
+      <img
+        class="mobile-header-mark"
+        src="assets/logo.svg"
+        width="520"
+        height="64"
+        alt="voortganginzicht.nl"
+      />
       <input
         type="hidden"
         id="project-name"
@@ -49,6 +56,29 @@
     </div>
     <div id="toolbar"></div>
     <div id="lang-switcher" class="lang-switcher"></div>
+    <div class="mobile-header-menu" id="mobile-header-menu">
+      <button
+        type="button"
+        class="btn btn--icon mobile-header-menu__button"
+        id="mobile-header-menu-toggle"
+        aria-haspopup="menu"
+        aria-expanded="false"
+        aria-controls="mobile-header-menu-list"
+        title="Menu"
+        aria-label="Menu"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M5 7h14M5 12h14M5 17h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <div
+        class="mobile-header-menu__list"
+        id="mobile-header-menu-list"
+        role="menu"
+        aria-label="Menu"
+        hidden
+      ></div>
+    </div>
   </header>
 
   <!-- Two-panel main layout -->
@@ -189,16 +219,22 @@
       </div>
     </section>
 
+    <!-- Mobile-only panel: help as a tab -->
+    <section class="panel panel--mobile-help" id="mobile-help-panel" aria-label="Help">
+      <div class="panel__body">
+        <div id="mobile-help-panel-content"></div>
+      </div>
+    </section>
+
   </main>
 
-  <nav class="mobile-panel-nav" id="mobile-panel-nav" aria-label="Panelen" role="tablist">
+  <nav class="mobile-panel-nav" id="mobile-panel-nav" aria-label="Panelen">
     <button
       type="button"
       class="mobile-panel-nav__button"
       data-mobile-panel="tree"
       aria-controls="tree-panel"
-      aria-selected="true"
-      role="tab"
+      aria-current="page"
     >
       <svg class="mobile-panel-nav__icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <path d="M5 5h5v5H5zM14 5h5v5h-5zM14 14h5v5h-5zM10 8h2a2 2 0 0 1 2 2v1a2 2 0 0 0 2 2h1M10 8h2a2 2 0 0 1 2 2v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
@@ -210,8 +246,6 @@
       class="mobile-panel-nav__button"
       data-mobile-panel="chart"
       aria-controls="chart-panel"
-      aria-selected="false"
-      role="tab"
     >
       <svg class="mobile-panel-nav__icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -223,14 +257,25 @@
       class="mobile-panel-nav__button"
       data-mobile-panel="settings"
       aria-controls="settings-drawer"
-      aria-selected="false"
-      role="tab"
     >
       <svg class="mobile-panel-nav__icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <path d="M12.2 2h-.4a2 2 0 0 0-2 2v.2a2 2 0 0 1-1 1.7l-.4.2a2 2 0 0 1-2 0l-.2-.1a2 2 0 0 0-2.7.7l-.2.4a2 2 0 0 0 .7 2.7l.2.1a2 2 0 0 1 1 1.7v.6a2 2 0 0 1-1 1.7l-.2.1a2 2 0 0 0-.7 2.7l.2.4a2 2 0 0 0 2.7.7l.2-.1a2 2 0 0 1 2 0l.4.2a2 2 0 0 1 1 1.7v.2a2 2 0 0 0 2 2h.4a2 2 0 0 0 2-2v-.2a2 2 0 0 1 1-1.7l.4-.2a2 2 0 0 1 2 0l.2.1a2 2 0 0 0 2.7-.7l.2-.4a2 2 0 0 0-.7-2.7l-.2-.1a2 2 0 0 1-1-1.7v-.6a2 2 0 0 1 1-1.7l.2-.1a2 2 0 0 0 .7-2.7l-.2-.4a2 2 0 0 0-2.7-.7l-.2.1a2 2 0 0 1-2 0l-.4-.2a2 2 0 0 1-1-1.7V4a2 2 0 0 0-2-2Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
       </svg>
       <span class="mobile-panel-nav__label">Instellingen</span>
+    </button>
+    <button
+      type="button"
+      class="mobile-panel-nav__button"
+      data-mobile-panel="help"
+      aria-controls="mobile-help-panel"
+    >
+      <svg class="mobile-panel-nav__icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+        <path d="M9.8 9a2.4 2.4 0 0 1 4.6 1c0 1.7-2.4 2-2.4 3.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <path d="M12 17h.01" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <span class="mobile-panel-nav__label">Help</span>
     </button>
   </nav>
 

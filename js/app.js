@@ -14,7 +14,7 @@ import { init as initTreeEditor } from './ui/tree-editor.js';
 import { init as initToolbar } from './ui/toolbar.js';
 import { init as initSettingsPanel } from './ui/settings-panel.js';
 import { init as initLangSwitcher } from './ui/lang-switcher.js';
-import { init as initHelpPanel } from './ui/help-panel.js';
+import { init as initHelpPanel, initInline as initInlineHelp, showInlineHelp } from './ui/help-panel.js';
 import { init as initContactFeedbackPanel } from './ui/contact-feedback-panel.js';
 import { updateSettings, getSettings, resetSettings } from './model/settings.js';
 import { showError, showSuccess } from './ui/dialogs.js';
@@ -24,10 +24,10 @@ import { on, emit } from './events.js';
 import { renderChart } from './chart/renderer.js';
 import { canRenderChart, formatChartRenderIssue, getChartRenderIssue } from './chart/render-validation.js';
 import { canCopyChartToClipboard, chartSvgToPngBlob, copyChartToClipboard } from './chart/clipboard.js';
-import { t } from './i18n.js';
+import { getLang, setLang, t } from './i18n.js';
 
 const PROJECT_NAME_MAX_LENGTH = 100;
-const MOBILE_PANEL_QUERY = '(max-width: 700px)';
+const MOBILE_PANEL_QUERY = '(max-width: 700px), ((pointer: coarse) and (max-height: 700px))';
 const CHART_ZOOM_LEVELS = [0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2];
 let appInitialized = false;
 let _chartZoom = 1;
@@ -60,10 +60,13 @@ function initApplication() {
 
   const settingsPanelEl = document.getElementById('settings-panel');
   if (settingsPanelEl) initSettingsPanel(settingsPanelEl);
+  const mobileHelpPanelEl = document.getElementById('mobile-help-panel-content');
+  if (mobileHelpPanelEl) initInlineHelp(mobileHelpPanelEl);
 
   initTreePanelToggle();
   initSettingsDrawer();
   initChartZoomControls();
+  initMobileHeaderMenu();
   initMobilePanelNav();
   initProjectNameTitle();
   initVersionInfo();
@@ -139,7 +142,11 @@ function autoRender() {
     return;
   }
 
-  renderChart(chartBody, root, { ...settings, chartZoom: _chartZoom, projectName: getProjectName() });
+  renderChart(chartBody, root, {
+    ...settings,
+    chartZoom: _chartZoom,
+    projectName: getProjectName(),
+  });
   _lastRenderWidth = chartBody.clientWidth;
   updateChartZoomControls();
   emit('chart-generated', root);
@@ -409,9 +416,10 @@ function isMobilePanelLayout() {
 }
 
 function setMobilePanel(panel, options = {}) {
-  if (!['tree', 'chart', 'settings'].includes(panel)) return;
+  if (!['tree', 'chart', 'settings', 'help'].includes(panel)) return;
 
   _activeMobilePanel = panel;
+  if (panel === 'help') showInlineHelp();
   applyMobilePanelState(options);
 }
 
@@ -426,13 +434,18 @@ function applyMobilePanelState(options = {}) {
   document.body.classList.toggle('mobile-panel--tree', isMobile && _activeMobilePanel === 'tree');
   document.body.classList.toggle('mobile-panel--chart', isMobile && _activeMobilePanel === 'chart');
   document.body.classList.toggle('mobile-panel--settings', isMobile && _activeMobilePanel === 'settings');
+  document.body.classList.toggle('mobile-panel--help', isMobile && _activeMobilePanel === 'help');
 
   const nav = document.getElementById('mobile-panel-nav');
   const buttons = nav?.querySelectorAll('[data-mobile-panel]') ?? [];
   buttons.forEach((button) => {
     const isActive = isMobile && button.dataset.mobilePanel === _activeMobilePanel;
     button.classList.toggle('mobile-panel-nav__button--active', isActive);
-    button.setAttribute('aria-selected', String(isActive));
+    if (isActive) {
+      button.setAttribute('aria-current', 'page');
+    } else {
+      button.removeAttribute('aria-current');
+    }
   });
 
   if (!isMobile) return;
@@ -466,6 +479,135 @@ function updateMobilePanelNavLabels() {
     button.title = label;
     button.setAttribute('aria-label', label);
   });
+
+}
+
+// ── Mobile header menu ──────────────────────────────────────────────────────
+
+let _mobileHeaderMenuOpen = false;
+let _mobileHeaderMenuHandlersBound = false;
+
+function initMobileHeaderMenu() {
+  const toggleBtn = document.getElementById('mobile-header-menu-toggle');
+  if (!toggleBtn) return;
+
+  toggleBtn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    setMobileHeaderMenuOpen(!_mobileHeaderMenuOpen);
+  });
+
+  bindMobileHeaderMenuHandlers();
+  renderMobileHeaderMenu();
+}
+
+function bindMobileHeaderMenuHandlers() {
+  if (_mobileHeaderMenuHandlersBound) return;
+  _mobileHeaderMenuHandlersBound = true;
+
+  document.addEventListener('click', (event) => {
+    const wrap = document.getElementById('mobile-header-menu');
+    if (!_mobileHeaderMenuOpen || !wrap) return;
+    if (event.target instanceof Node && wrap.contains(event.target)) return;
+    setMobileHeaderMenuOpen(false);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (!_mobileHeaderMenuOpen || event.key !== 'Escape') return;
+    setMobileHeaderMenuOpen(false, { focusToggle: true });
+  });
+}
+
+function renderMobileHeaderMenu() {
+  const menu = document.getElementById('mobile-header-menu-list');
+  if (!menu) return;
+
+  menu.innerHTML = '';
+  menu.setAttribute('aria-label', t('mobile.menu.label'));
+
+  menu.appendChild(buildMobileMenuItem(t('toolbar.new'), () => dispatchToolbarAction('new-project')));
+  menu.appendChild(buildMobileMenuItem(t('toolbar.open'), () => dispatchToolbarAction('load')));
+  menu.appendChild(buildMobileMenuItem(t('toolbar.save'), () => dispatchToolbarAction('save')));
+  menu.appendChild(buildMobileMenuSeparator());
+  menu.appendChild(buildMobileMenuItem(t('toolbar.download'), () => dispatchToolbarAction('download')));
+  menu.appendChild(buildMobileMenuItem(t('toolbar.copy'), () => dispatchToolbarAction('copy-report')));
+  menu.appendChild(buildMobileMenuSeparator());
+  menu.appendChild(buildMobileMenuItem(mobileLanguageToggleLabel(), toggleMobileLanguage));
+  menu.appendChild(buildMobileContactItem());
+
+  updateMobileHeaderMenuLabels();
+}
+
+function buildMobileMenuItem(label, action) {
+  const item = document.createElement('button');
+  item.type = 'button';
+  item.className = 'mobile-header-menu__item';
+  item.setAttribute('role', 'menuitem');
+  item.textContent = label;
+  item.addEventListener('click', () => {
+    setMobileHeaderMenuOpen(false);
+    action();
+  });
+  return item;
+}
+
+function buildMobileContactItem() {
+  const item = document.createElement('button');
+  item.type = 'button';
+  item.className = 'mobile-header-menu__item';
+  item.dataset.contactFeedback = 'true';
+  item.setAttribute('role', 'menuitem');
+  item.textContent = t('contact.feedback.link');
+  item.title = t('contact.feedback.open');
+  item.setAttribute('aria-label', t('contact.feedback.open'));
+  item.addEventListener('click', () => setMobileHeaderMenuOpen(false));
+  return item;
+}
+
+function buildMobileMenuSeparator() {
+  const separator = document.createElement('div');
+  separator.className = 'mobile-header-menu__separator';
+  separator.setAttribute('role', 'separator');
+  return separator;
+}
+
+function dispatchToolbarAction(action) {
+  document.dispatchEvent(new CustomEvent(`toolbar:${action}`));
+}
+
+function mobileLanguageToggleLabel() {
+  const nextLang = getLang() === 'nl' ? 'en' : 'nl';
+  return t('mobile.menu.language', { language: t(`lang.${nextLang}`) });
+}
+
+function toggleMobileLanguage() {
+  setLang(getLang() === 'nl' ? 'en' : 'nl');
+}
+
+function setMobileHeaderMenuOpen(open, options = {}) {
+  _mobileHeaderMenuOpen = Boolean(open);
+  const toggleBtn = document.getElementById('mobile-header-menu-toggle');
+  const menu = document.getElementById('mobile-header-menu-list');
+
+  if (toggleBtn) {
+    toggleBtn.setAttribute('aria-expanded', String(_mobileHeaderMenuOpen));
+    toggleBtn.classList.toggle('mobile-header-menu__button--active', _mobileHeaderMenuOpen);
+    if (options.focusToggle) toggleBtn.focus();
+  }
+  if (menu) menu.hidden = !_mobileHeaderMenuOpen;
+
+  updateMobileHeaderMenuLabels();
+}
+
+function updateMobileHeaderMenuLabels() {
+  const toggleBtn = document.getElementById('mobile-header-menu-toggle');
+  const menu = document.getElementById('mobile-header-menu-list');
+  const label = t(_mobileHeaderMenuOpen ? 'mobile.menu.close' : 'mobile.menu.open');
+
+  if (toggleBtn) {
+    toggleBtn.title = label;
+    toggleBtn.setAttribute('aria-label', label);
+  }
+  if (menu) menu.setAttribute('aria-label', t('mobile.menu.label'));
 }
 
 // ── Toolbar action handlers ──────────────────────────────────────────────────
@@ -711,6 +853,7 @@ function applyStaticTranslations() {
   updateChartZoomControls();
   updateSettingsDrawerLabels();
   updateMobilePanelNavLabels();
+  renderMobileHeaderMenu();
 }
 
 function refreshSettingsPanel() {
