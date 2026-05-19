@@ -1049,6 +1049,71 @@ body.help-panel-open {
   margin-top: 8px;
 }
 
+.help-dialog__email {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 18px;
+  color: #1d4ed8;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.help-dialog__email:hover,
+.help-dialog__email:focus-visible {
+  color: #1e40af;
+}
+
+.help-dialog__email-icon {
+  width: 21px;
+  height: 21px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+}
+
+.help-dialog__kofi-button {
+  display: inline-flex;
+  margin-top: 4px;
+  border-radius: var(--radius-md);
+  line-height: 0;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.help-dialog__kofi-button:hover,
+.help-dialog__kofi-button:focus-visible {
+  transform: translateY(-1px);
+}
+
+.help-dialog__kofi-button:active {
+  transform: translateY(0);
+}
+
+.help-dialog__kofi-button:focus-visible {
+  outline: 2px solid var(--color-btn-primary);
+  outline-offset: 3px;
+}
+
+.help-dialog__kofi-button-image {
+  display: block;
+  width: 210px;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: filter 0.12s ease;
+}
+
+.help-dialog__kofi-button:hover .help-dialog__kofi-button-image,
+.help-dialog__kofi-button:focus-visible .help-dialog__kofi-button-image {
+  filter: brightness(1.04) drop-shadow(0 3px 5px rgb(15 23 42 / 0.18));
+}
+
 /* ============================================================
    Contact Dialog
    ============================================================ */

@@ -9,12 +9,17 @@ import { on } from '../events.js';
 import { t } from '../i18n.js';
 
 const DEFAULT_SECTION = 'overview';
+const CONTACT_EMAIL = 'info@voortganginzicht.nl';
+const KOFI_SUPPORT_URL = 'https://ko-fi.com/michavdijk';
+const KOFI_BUTTON_IMAGE = 'assets/support_me_on_kofi_blue.png';
+const KOFI_BUTTON_ALT = 'Support me on Ko-fi';
 const HELP_SECTIONS = [
   'overview',
   'workStructure',
   'chart',
   'settings',
   'files',
+  'contactFeedback',
 ];
 
 const HELP_CONTENT = {
@@ -75,6 +80,15 @@ const HELP_CONTENT = {
     { type: 'heading', key: 'download.heading' },
     { type: 'paragraph', key: 'download.body' },
     { type: 'paragraph', key: 'privacy' },
+  ],
+  contactFeedback: [
+    { type: 'paragraph', i18nKey: 'contact.feedback.intro.question' },
+    { type: 'paragraph', i18nKey: 'contact.feedback.intro.practice' },
+    { type: 'paragraph', i18nKey: 'contact.feedback.intro.suggestions' },
+    { type: 'emailLink' },
+    { type: 'heading', i18nKey: 'contact.feedback.support.title' },
+    { type: 'paragraph', i18nKey: 'contact.feedback.support.body' },
+    { type: 'kofiSupportLink' },
   ],
 };
 
@@ -341,14 +355,14 @@ function buildHelpBlock(section, block) {
   if (block.type === 'heading') {
     const heading = document.createElement('h4');
     heading.className = 'help-dialog__subheading';
-    heading.textContent = t(`help.${section}.${block.key}`);
+    heading.textContent = translateHelpBlock(section, block);
     return heading;
   }
 
   if (block.type === 'paragraph') {
     const paragraph = document.createElement('p');
     paragraph.className = 'help-dialog__paragraph';
-    paragraph.textContent = t(`help.${section}.${block.key}`);
+    paragraph.textContent = translateHelpBlock(section, block);
     return paragraph;
   }
 
@@ -357,13 +371,88 @@ function buildHelpBlock(section, block) {
     list.className = 'help-dialog__list';
     for (const key of block.keys) {
       const item = document.createElement('li');
-      item.textContent = t(`help.${section}.${key}`);
+      item.textContent = t(helpTranslationKey(section, key));
       list.appendChild(item);
     }
     return list;
   }
 
+  if (block.type === 'emailLink') {
+    return buildContactEmailLink();
+  }
+
+  if (block.type === 'kofiSupportLink') {
+    return buildKofiSupportLink();
+  }
+
   return null;
+}
+
+function translateHelpBlock(section, block) {
+  return t(block.i18nKey || `help.${section}.${block.key}`);
+}
+
+function helpTranslationKey(section, key) {
+  return key.startsWith('help.') || key.startsWith('contact.')
+    ? key
+    : `help.${section}.${key}`;
+}
+
+function buildContactEmailLink() {
+  const email = document.createElement('a');
+  email.className = 'help-dialog__email';
+  email.href = `mailto:${CONTACT_EMAIL}`;
+
+  const emailText = document.createElement('span');
+  emailText.textContent = CONTACT_EMAIL;
+  email.append(buildEmailIcon(), emailText);
+  return email;
+}
+
+function buildEmailIcon() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.classList.add('help-dialog__email-icon');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+
+  const outline = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  outline.setAttribute('x', '4');
+  outline.setAttribute('y', '6');
+  outline.setAttribute('width', '16');
+  outline.setAttribute('height', '12');
+  outline.setAttribute('rx', '2.5');
+
+  const flap = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  flap.setAttribute('d', 'M4.8 8.1 11 13.05a1.6 1.6 0 0 0 2 0l6.2-4.95');
+
+  const leftFold = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  leftFold.setAttribute('d', 'm9.5 12.15-4.7 4.3');
+
+  const rightFold = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  rightFold.setAttribute('d', 'm14.5 12.15 4.7 4.3');
+
+  svg.append(outline, flap, leftFold, rightFold);
+  return svg;
+}
+
+function buildKofiSupportLink() {
+  const link = document.createElement('a');
+  link.className = 'help-dialog__kofi-button';
+  link.href = KOFI_SUPPORT_URL;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.setAttribute('aria-label', KOFI_BUTTON_ALT);
+
+  const image = document.createElement('img');
+  image.className = 'help-dialog__kofi-button-image';
+  image.src = KOFI_BUTTON_IMAGE;
+  image.width = 980;
+  image.height = 198;
+  image.alt = KOFI_BUTTON_ALT;
+
+  link.appendChild(image);
+  return link;
 }
 
 function normalizeSection(section) {

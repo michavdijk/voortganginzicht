@@ -15,7 +15,6 @@ import { init as initToolbar } from './ui/toolbar.js';
 import { init as initSettingsPanel } from './ui/settings-panel.js';
 import { init as initLangSwitcher } from './ui/lang-switcher.js';
 import { init as initHelpPanel, initInline as initInlineHelp, showInlineHelp } from './ui/help-panel.js';
-import { init as initContactFeedbackPanel } from './ui/contact-feedback-panel.js';
 import { updateSettings, getSettings, resetSettings } from './model/settings.js';
 import { showError, showSuccess } from './ui/dialogs.js';
 import { serialize, deserialize } from './io/serializer.js';
@@ -55,7 +54,6 @@ function initApplication() {
   initToolbar(toolbarEl);
   initTreeEditor(treeEditorEl);
   initHelpPanel();
-  initContactFeedbackPanel();
   if (langEl) initLangSwitcher(langEl);
 
   const settingsPanelEl = document.getElementById('settings-panel');
@@ -559,12 +557,14 @@ function buildMobileContactItem() {
   const item = document.createElement('button');
   item.type = 'button';
   item.className = 'mobile-header-menu__item';
-  item.dataset.contactFeedback = 'true';
   item.setAttribute('role', 'menuitem');
   item.textContent = t('contact.feedback.link');
   item.title = t('contact.feedback.open');
   item.setAttribute('aria-label', t('contact.feedback.open'));
-  item.addEventListener('click', () => setMobileHeaderMenuOpen(false));
+  item.addEventListener('click', () => {
+    setMobileHeaderMenuOpen(false);
+    setMobilePanel('help', { helpSection: 'contactFeedback' });
+  });
   return item;
 }
 
