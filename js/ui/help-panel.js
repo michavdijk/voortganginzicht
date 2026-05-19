@@ -251,16 +251,21 @@ function renderInlineHelp() {
   body.className = 'help-dialog__body mobile-help__body';
   inlineHelpContainer.appendChild(body);
 
+  const navWrap = document.createElement('div');
+  navWrap.className = 'mobile-help__nav-wrap';
+  body.appendChild(navWrap);
+
   const inlineNav = document.createElement('nav');
   inlineNav.className = 'help-dialog__nav';
   inlineNav.setAttribute('aria-label', t('help.navLabel'));
-  body.appendChild(inlineNav);
+  navWrap.appendChild(inlineNav);
 
   const inlineContent = document.createElement('article');
   inlineContent.className = 'help-dialog__content';
   body.appendChild(inlineContent);
 
   renderHelpNav(inlineNav, renderInlineHelp);
+  initInlineHelpNavScroll(inlineNav);
   renderSectionInto(inlineContent, activeSection);
 }
 
@@ -280,6 +285,25 @@ function renderHelpNav(targetNav, renderAfterSelect) {
     });
     targetNav.appendChild(button);
   }
+}
+
+function initInlineHelpNavScroll(nav) {
+  const activeButton = nav.querySelector('.help-dialog__nav-button--active');
+  nav.addEventListener('scroll', () => updateInlineHelpNavOverflow(nav), { passive: true });
+
+  requestAnimationFrame(() => {
+    activeButton?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    updateInlineHelpNavOverflow(nav);
+  });
+}
+
+function updateInlineHelpNavOverflow(nav) {
+  const wrap = nav.closest('.mobile-help__nav-wrap');
+  if (!wrap) return;
+
+  const maxScrollLeft = Math.max(0, nav.scrollWidth - nav.clientWidth);
+  wrap.classList.toggle('mobile-help__nav-wrap--can-scroll-left', nav.scrollLeft > 1);
+  wrap.classList.toggle('mobile-help__nav-wrap--can-scroll-right', nav.scrollLeft < maxScrollLeft - 1);
 }
 
 function renderSectionInto(targetContent, section) {

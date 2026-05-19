@@ -533,8 +533,13 @@ function renderMobileHeaderMenu() {
   menu.appendChild(buildMobileMenuSeparator());
   menu.appendChild(buildMobileMenuItem(mobileLanguageToggleLabel(), toggleMobileLanguage));
   menu.appendChild(buildMobileContactItem());
+  const versionSeparator = buildMobileMenuSeparator();
+  versionSeparator.dataset.mobileVersionSeparator = 'true';
+  menu.appendChild(versionSeparator);
+  menu.appendChild(buildMobileVersionInfo());
 
   updateMobileHeaderMenuLabels();
+  updateMobileHeaderVersion();
 }
 
 function buildMobileMenuItem(label, action) {
@@ -568,6 +573,15 @@ function buildMobileMenuSeparator() {
   separator.className = 'mobile-header-menu__separator';
   separator.setAttribute('role', 'separator');
   return separator;
+}
+
+function buildMobileVersionInfo() {
+  const version = document.createElement('div');
+  version.className = 'mobile-header-menu__version';
+  version.id = 'mobile-header-menu-version';
+  version.setAttribute('role', 'note');
+  version.hidden = true;
+  return version;
 }
 
 function dispatchToolbarAction(action) {
@@ -608,6 +622,21 @@ function updateMobileHeaderMenuLabels() {
     toggleBtn.setAttribute('aria-label', label);
   }
   if (menu) menu.setAttribute('aria-label', t('mobile.menu.label'));
+}
+
+function updateMobileHeaderVersion() {
+  const desktopVersion = document.getElementById('app-version');
+  const mobileVersion = document.getElementById('mobile-header-menu-version');
+  if (!mobileVersion) return;
+
+  const label = desktopVersion?.textContent.trim() ?? '';
+  const separator = mobileVersion.previousElementSibling;
+  mobileVersion.textContent = label;
+  mobileVersion.title = desktopVersion?.title ?? '';
+  mobileVersion.hidden = !label;
+  if (separator?.dataset.mobileVersionSeparator === 'true') {
+    separator.hidden = !label;
+  }
 }
 
 // ── Toolbar action handlers ──────────────────────────────────────────────────
@@ -881,6 +910,8 @@ function initVersionInfo() {
       ].filter(Boolean).join(' - ');
 
       if (details) versionEl.title = details;
+
+      updateMobileHeaderVersion();
     })
     .catch(() => {
       // version.json is generated during deploy; local/dev copies may not have it.

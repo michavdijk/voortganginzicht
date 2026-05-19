@@ -1210,6 +1210,44 @@ body.help-panel-open {
   }
 }
 
+.mobile-help__nav-wrap {
+  position: relative;
+  min-width: 0;
+  background: var(--color-bg);
+}
+
+.mobile-help__nav-wrap::before,
+.mobile-help__nav-wrap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 1px;
+  z-index: 1;
+  width: 34px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.mobile-help__nav-wrap::before {
+  left: 0;
+  background: linear-gradient(to right, var(--color-bg) 30%, rgb(248 250 252 / 0));
+}
+
+.mobile-help__nav-wrap::after {
+  right: 0;
+  background: linear-gradient(to left, var(--color-bg) 30%, rgb(248 250 252 / 0));
+}
+
+.mobile-help__nav-wrap--can-scroll-left::before,
+.mobile-help__nav-wrap--can-scroll-right::after {
+  opacity: 1;
+}
+
+.mobile-help__nav-wrap .help-dialog__nav {
+  scroll-padding: 12px 38px;
+}
+
 /* ============================================================
    Tree Editor
    ============================================================ */
@@ -1976,6 +2014,17 @@ ul.tree__children {
     height: 1px;
     margin: 5px 4px;
     background: var(--color-border);
+  }
+
+  .mobile-header-menu__version {
+    padding: 7px 10px 4px;
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+    line-height: 1.25;
+    overflow: hidden;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .app-layout {
