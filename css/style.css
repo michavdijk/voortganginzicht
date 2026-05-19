@@ -906,7 +906,9 @@ body.help-panel-open {
   inset: 0;
   z-index: 300;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
   background: rgb(15 23 42 / 0.38);
 }
 
@@ -915,12 +917,15 @@ body.help-panel-open {
 }
 
 .help-dialog {
-  width: min(720px, 100%);
-  height: 100%;
   display: flex;
+  width: min(1040px, calc(100vw - 64px));
+  height: min(760px, calc(100vh - 64px));
   flex-direction: column;
+  overflow: hidden;
   background: var(--color-surface);
-  box-shadow: -8px 0 24px rgb(15 23 42 / 0.18);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 54px rgb(15 23 42 / 0.24), 0 4px 12px rgb(15 23 42 / 0.12);
 }
 
 .help-dialog__header {
@@ -1017,7 +1022,7 @@ body.help-panel-open {
 .help-dialog__intro {
   color: var(--color-text);
   line-height: 1.55;
-  max-width: 56ch;
+  max-width: 70ch;
   margin-bottom: 12px;
 }
 
@@ -1028,7 +1033,7 @@ body.help-panel-open {
   padding-left: 20px;
   color: var(--color-text);
   line-height: 1.5;
-  max-width: 62ch;
+  max-width: 74ch;
   margin: 0 0 14px;
 }
 
@@ -1187,8 +1192,13 @@ body.help-panel-open {
 }
 
 @media (max-width: 700px), ((pointer: coarse) and (max-height: 700px)) {
+  .help-overlay {
+    padding: 16px;
+  }
+
   .help-dialog {
     width: 100%;
+    height: calc(100vh - 32px);
   }
 
   .help-dialog__body {
