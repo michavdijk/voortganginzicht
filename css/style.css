@@ -1911,6 +1911,16 @@ ul.tree__children {
     min-height: 100dvh;
   }
 
+  input,
+  textarea,
+  select,
+  .tree__inline-edit,
+  .tree__number-input,
+  .settings-panel__select,
+  .settings-panel__input {
+    font-size: 16px;
+  }
+
   .app-header {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
