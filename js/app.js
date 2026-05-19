@@ -417,7 +417,7 @@ function setMobilePanel(panel, options = {}) {
   if (!['tree', 'chart', 'settings', 'help'].includes(panel)) return;
 
   _activeMobilePanel = panel;
-  if (panel === 'help') showInlineHelp();
+  if (panel === 'help') showInlineHelp(options.helpSection);
   applyMobilePanelState(options);
 }
 
